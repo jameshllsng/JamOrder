@@ -8,10 +8,10 @@
 		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>br.com.requestmngr</groupId>
-	<artifactId>requestmngr</artifactId>
+	<groupId>br.com.jamorder</groupId>
+	<artifactId>jamorder</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>requestmngr</name>
+	<name>jamorder</name>
 	<description/>
 	<url/>
 	<licenses>

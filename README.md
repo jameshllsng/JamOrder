@@ -1,4 +1,4 @@
-# RequestMNGR
+# JamOrder
 
 Aplicação interna para registrar requisições de compra. O projeto usa Spring Boot, JDBC, PostgreSQL e migrations Flyway.
 

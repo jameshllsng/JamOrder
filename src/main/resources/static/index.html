@@ -3,15 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RequestMNGR</title>
+    <title>JamOrder</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+<div class="application-layout">
+    <aside class="application-sidebar" aria-label="Navegação principal">
+        <div class="sidebar-brand">
+            <span class="sidebar-mark" aria-hidden="true">J</span>
+            <div>
+                <strong>JamOrder</strong>
+                <span>Operações internas</span>
+            </div>
+        </div>
+        <nav class="sidebar-navigation" aria-label="Seções do sistema">
+            <a class="navigation-item navigation-item-active" href="/" aria-current="page"><span aria-hidden="true">■</span> Requisições</a>
+        </nav>
+        <p class="sidebar-footnote">Acompanhamento de compras</p>
+    </aside>
 <main class="page-shell">
     <header class="application-header">
-        <div class="application-identity">
-            <h1>RequestMNGR</h1>
-            <p>Controle de requisições de compra</p>
+        <div class="application-context">
+            <p class="eyebrow">Operação</p>
+            <h1>Requisições de compra</h1>
+            <p>Acompanhe solicitações e seus próximos passos.</p>
         </div>
         <div class="account-actions">
             <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Ativar modo claro" title="Ativar modo claro">☀</button>
@@ -53,11 +68,36 @@
                 <tbody id="request-table-body"></tbody>
             </table>
         </div>
-        <p class="empty-state" id="empty-state" hidden>Nenhuma requisição cadastrada.</p>
+        <div class="empty-state" id="empty-state" hidden>
+            <strong>Nenhuma requisição cadastrada.</strong>
+            <p>Crie a primeira solicitação para iniciar o acompanhamento.</p>
+            <button class="button button-primary" id="open-create-empty" type="button">Nova requisição</button>
+        </div>
     </section>
 </main>
+</div>
 
 <div class="operation-feedback" id="operation-feedback" role="status" aria-live="polite" hidden></div>
+
+<dialog class="details-dialog" id="request-details-dialog" aria-labelledby="request-details-title">
+    <div class="details-content">
+        <div class="dialog-header">
+            <div>
+                <h2 id="request-details-title">Detalhes da compra</h2>
+                <p id="request-details-subtitle"></p>
+            </div>
+            <button class="icon-button" id="close-request-details" type="button" aria-label="Fechar">×</button>
+        </div>
+        <section class="details-section" aria-labelledby="items-title">
+            <h3 id="items-title">Itens e recebimentos</h3>
+            <div id="request-details-items"></div>
+        </section>
+        <section class="details-section" aria-labelledby="history-title">
+            <h3 id="history-title">Histórico</h3>
+            <ol class="history-list" id="request-history"></ol>
+        </section>
+    </div>
+</dialog>
 
 <dialog class="confirmation-dialog" id="confirmation-dialog" aria-labelledby="confirmation-title">
     <div class="confirmation-content">

@@ -13,6 +13,9 @@ const confirmationDialog = document.querySelector("#confirmation-dialog");
 const confirmationTitle = document.querySelector("#confirmation-title");
 const confirmationMessage = document.querySelector("#confirmation-message");
 const confirmationAction = document.querySelector("#confirmation-action");
+const requestDetailsDialog = document.querySelector("#request-details-dialog");
+const requestDetailsItems = document.querySelector("#request-details-items");
+const requestHistory = document.querySelector("#request-history");
 const themeToggle = document.querySelector("#theme-toggle");
 let csrfToken;
 let editingRequestId = null;
@@ -22,6 +25,7 @@ let feedbackAnimation;
 let confirmationResolver;
 
 document.querySelector("#open-create-form").addEventListener("click", openCreateDialog);
+document.querySelector("#open-create-empty").addEventListener("click", openCreateDialog);
 document.querySelector("#close-create-form").addEventListener("click", closeCreateDialog);
 document.querySelector("#cancel-create").addEventListener("click", closeCreateDialog);
 document.querySelector("#add-item").addEventListener("click", () => addItemForm(true));
@@ -29,6 +33,7 @@ document.querySelector("#refresh-list").addEventListener("click", loadPurchaseRe
 document.querySelector("#logout").addEventListener("click", logout);
 themeToggle.addEventListener("click", toggleTheme);
 document.querySelector("#confirmation-cancel").addEventListener("click", () => resolveConfirmation(false));
+document.querySelector("#close-request-details").addEventListener("click", () => requestDetailsDialog.close());
 confirmationAction.addEventListener("click", () => resolveConfirmation(true));
 confirmationDialog.addEventListener("cancel", event => { event.preventDefault(); resolveConfirmation(false); });
 createForm.addEventListener("submit", createPurchaseRequest);
@@ -46,8 +51,38 @@ function renderSummaryCards(purchaseRequests) { const summaryCards = document.qu
 function renderPurchaseRequestTable(purchaseRequests) { const tableBody = document.querySelector("#request-table-body"); const emptyState = document.querySelector("#empty-state"); tableBody.replaceChildren(); document.querySelector("#request-count").textContent = `${purchaseRequests.length} requisição(ões) encontrada(s)`; emptyState.hidden = purchaseRequests.length !== 0; purchaseRequests.forEach(purchaseRequest => { const row = document.createElement("tr"); appendCell(row, purchaseRequest.requestNumber); appendCell(row, purchaseRequest.department); appendCell(row, purchaseRequest.requesterName); appendCell(row, purchaseRequest.purchaseReason); appendBadgeCell(row, priorityLabels[purchaseRequest.priority], `priority-${purchaseRequest.priority.toLowerCase()}`); appendBadgeCell(row, statusLabels[purchaseRequest.status], `status-${purchaseRequest.status.toLowerCase().replaceAll("_", "-")}`); appendCell(row, formatDate(purchaseRequest.requestedOn)); appendCell(row, formatOpenDuration(purchaseRequest.requestedOn)); appendCell(row, purchaseRequest.itemCount); appendCell(row, formatCurrency(purchaseRequest.totalValue)); appendActionCell(row, purchaseRequest); tableBody.append(row); }); }
 function appendCell(row, value) { const cell = document.createElement("td"); cell.textContent = value ?? "Não informado"; row.append(cell); }
 function appendBadgeCell(row, value, className) { const cell = document.createElement("td"); const badge = document.createElement("span"); badge.className = `badge ${className}`; badge.textContent = value; cell.append(badge); row.append(cell); }
-function appendActionCell(row, request) { const cell = document.createElement("td"); cell.className = "table-actions"; if (currentUserRole === "ADMIN" && request.status === "OPEN") { cell.append(actionButton("Editar", "edit", () => editPurchaseRequest(request.id)), actionButton("Cancelar", "cancel", () => cancelPurchaseRequest(request.id))); } if (currentUserRole === "ADMIN" && request.status === "CANCELLED") cell.append(actionButton("Excluir", "delete", () => deletePurchaseRequest(request.id))); row.append(cell); }
-function actionButton(label, variant, action) { const button = document.createElement("button"); button.className = `table-action table-action-${variant}`; button.type = "button"; button.textContent = label; button.addEventListener("click", action); return button; }
+function appendActionCell(row, request) { const cell = document.createElement("td"); cell.className = "table-actions"; cell.append(actionButton("Detalhes", "edit", () => showRequestDetails(request.id))); if (currentUserRole === "ADMIN" && request.status === "OPEN") cell.append(actionButton("Editar", "edit", () => editPurchaseRequest(request.id)), actionButton("Cancelar", "cancel", () => cancelPurchaseRequest(request.id))); if (currentUserRole === "ADMIN" && request.status === "CANCELLED") cell.append(actionButton("Excluir", "delete", () => deletePurchaseRequest(request.id))); row.append(cell); }
+function actionButton(label, variant, action) { const button = document.createElement("button"); button.className = `table-action table-action-${variant}`; button.type = "button"; button.textContent = label; button.title = label; button.setAttribute("aria-label", label); button.addEventListener("click", action); return button; }
+
+async function showRequestDetails(id) {
+    try {
+        const [requestResponse, historyResponse] = await Promise.all([fetch(`${apiUrl}/${id}`), fetch(`${apiUrl}/${id}/history`)]);
+        if (!requestResponse.ok) throw new Error(await readErrorMessage(requestResponse));
+        if (!historyResponse.ok) throw new Error(await readErrorMessage(historyResponse));
+        const request = await requestResponse.json(); const history = await historyResponse.json();
+        document.querySelector("#request-details-title").textContent = `Compra ${request.requestNumber}`;
+        document.querySelector("#request-details-subtitle").textContent = `${statusLabels[request.status]} · ${request.department}`;
+        requestDetailsItems.replaceChildren(); request.items.forEach(item => requestDetailsItems.append(createDetailItem(request.id, item)));
+        requestHistory.replaceChildren(); history.forEach(entry => { const item = document.createElement("li"); const title = document.createElement("strong"); title.textContent = entry.details; const detail = document.createElement("span"); detail.textContent = `${entry.performedBy} · ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(entry.createdAt))}`; item.append(title, detail); requestHistory.append(item); });
+        if (history.length === 0) { const item = document.createElement("li"); item.textContent = "Nenhuma alteração registrada."; requestHistory.append(item); }
+        requestDetailsDialog.showModal();
+    } catch (error) { showOperationFeedback(error.message, "danger"); }
+}
+function createDetailItem(requestId, item) {
+    const container = document.createElement("article"); container.className = "detail-item";
+    const header = document.createElement("div"); header.className = "detail-item-header";
+    const title = document.createElement("h4"); title.textContent = item.description;
+    const badge = document.createElement("span"); badge.className = `badge status-${item.status.toLowerCase().replaceAll("_", "-")}`; badge.textContent = item.status === "PARTIALLY_RECEIVED" ? "Recebido parcialmente" : item.status === "RECEIVED" ? "Recebido" : "Pendente";
+    header.append(title, badge); const summary = document.createElement("p"); summary.textContent = `Recebido: ${item.receivedQuantity} de ${item.quantity}${item.checkedBy ? ` · Conferido por: ${item.checkedBy}` : ""}`; container.append(header, summary);
+    if (["ADMIN", "BUYER"].includes(currentUserRole) && item.status !== "RECEIVED") {
+        const form = document.createElement("form"); form.className = "receipt-form";
+        const quantityLabel = document.createElement("label"); quantityLabel.textContent = "Quantidade"; const quantity = document.createElement("input"); quantity.type = "number"; quantity.min = "1"; quantity.max = String(item.quantity - item.receivedQuantity); quantity.value = quantity.max; quantity.required = true; quantityLabel.append(quantity);
+        const dateLabel = document.createElement("label"); dateLabel.textContent = "Data do recebimento"; const date = document.createElement("input"); date.type = "date"; date.value = new Date().toISOString().slice(0, 10); date.required = true; dateLabel.append(date);
+        const button = document.createElement("button"); button.className = "button button-primary"; button.type = "submit"; button.textContent = "Registrar recebimento";
+        form.append(quantityLabel, dateLabel, button); form.addEventListener("submit", event => registerReceipt(event, requestId, item.id, quantity, date)); container.append(form);
+    } return container;
+}
+async function registerReceipt(event, requestId, itemId, quantity, date) { event.preventDefault(); const response = await fetch(`${apiUrl}/${requestId}/items/${itemId}/receipts`, { method: "POST", headers: { "Content-Type": "application/json", [csrfToken.headerName]: csrfToken.token }, body: JSON.stringify({ receivedQuantity: Number(quantity.value), receivedOn: date.value }) }); if (!response.ok) { showOperationFeedback(await readErrorMessage(response), "danger"); return; } await loadPurchaseRequests(); requestDetailsDialog.close(); showOperationFeedback("Recebimento registrado.", "success"); }
 
 async function createPurchaseRequest(event) {
     event.preventDefault(); formMessage.hidden = true;
@@ -77,6 +112,6 @@ function setTodayAsRequestedDate() { createForm.elements.requestedOn.value = new
 
 async function start() { setTodayAsRequestedDate(); addItemForm(); await loadCsrfToken(); if (await loadAuthenticatedUser()) await loadPurchaseRequests(); }
 function toggleTheme() { applyTheme(document.body.classList.contains("theme-light") ? "dark" : "light"); }
-function applyTheme(theme) { const isLight = theme === "light"; document.body.classList.toggle("theme-light", isLight); themeToggle.textContent = isLight ? "◐" : "☀"; themeToggle.setAttribute("aria-label", isLight ? "Ativar modo escuro" : "Ativar modo claro"); themeToggle.title = themeToggle.getAttribute("aria-label"); localStorage.setItem("requestmngr-theme", theme); }
-applyTheme(localStorage.getItem("requestmngr-theme") ?? "dark");
+function applyTheme(theme) { const isLight = theme === "light"; document.body.classList.toggle("theme-light", isLight); themeToggle.textContent = isLight ? "◐" : "☀"; themeToggle.setAttribute("aria-label", isLight ? "Ativar modo escuro" : "Ativar modo claro"); themeToggle.title = themeToggle.getAttribute("aria-label"); localStorage.setItem("jamorder-theme", theme); }
+applyTheme(localStorage.getItem("jamorder-theme") ?? "dark");
 start().catch(error => { document.querySelector("#request-count").textContent = error.message; });

@@ -1,5 +1,5 @@
 let csrfToken;
-document.body.classList.toggle("theme-light", localStorage.getItem("requestmngr-theme") === "light");
+document.body.classList.toggle("theme-light", localStorage.getItem("jamorder-theme") === "light");
 const loginForm = document.querySelector("#login-form");
 const loginMessage = document.querySelector("#login-message");
 loginForm.addEventListener("submit", login);
