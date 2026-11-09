@@ -159,6 +159,43 @@ class PurchaseRequestServiceIntegrationTests {
         assertThat(purchaseRequestService.getById(draft.id()).status()).isEqualTo(PurchaseRequestStatus.CANCELLED);
     }
 
+    @Test
+    void trashHidesRequisitionUntilRestored() {
+        PurchaseRequestResponse open = purchaseRequestService.create(createRequest(uniqueNumber(), List.of(
+                item("Cable", 1, null))), ACTOR);
+
+        purchaseRequestService.moveToTrash(open.id(), ACTOR);
+
+        assertThat(purchaseRequestService.findAll()).noneMatch(summary -> summary.id().equals(open.id()));
+        assertThatThrownBy(() -> purchaseRequestService.getById(open.id()))
+                .isInstanceOf(PurchaseRequestNotFoundException.class);
+        assertThatThrownBy(() -> purchaseRequestService.cancel(open.id(), ACTOR))
+                .isInstanceOf(PurchaseRequestNotFoundException.class);
+        assertThat(purchaseRequestService.findInTrash())
+                .anySatisfy(deleted -> {
+                    assertThat(deleted.id()).isEqualTo(open.id());
+                    assertThat(deleted.deletedBy()).isEqualTo(ACTOR);
+                });
+
+        PurchaseRequestResponse restored = purchaseRequestService.restoreFromTrash(open.id(), ACTOR);
+
+        assertThat(restored.status()).isEqualTo(PurchaseRequestStatus.OPEN);
+        assertThat(purchaseRequestService.findAll()).anyMatch(summary -> summary.id().equals(open.id()));
+        assertThat(purchaseRequestService.findInTrash()).noneMatch(deleted -> deleted.id().equals(open.id()));
+        assertThat(purchaseRequestService.findHistory(open.id()))
+                .extracting(entry -> entry.action())
+                .contains("DELETED", "RESTORED");
+    }
+
+    @Test
+    void restoringRequisitionOutsideTrashFails() {
+        PurchaseRequestResponse open = purchaseRequestService.create(createRequest(uniqueNumber(), List.of(
+                item("Cable", 1, null))), ACTOR);
+
+        assertThatThrownBy(() -> purchaseRequestService.restoreFromTrash(open.id(), ACTOR))
+                .isInstanceOf(PurchaseRequestNotFoundException.class);
+    }
+
     private static CreatePurchaseRequestRequest createRequest(String number, List<CreatePurchaseRequestItemRequest> items) {
         return new CreatePurchaseRequestRequest(
                 number,

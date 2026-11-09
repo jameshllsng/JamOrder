@@ -61,7 +61,20 @@ public class PurchaseRequestController {
     @GetMapping("/{id}/history")
     public List<PurchaseRequestHistoryResponse> findHistory(@PathVariable long id) { return purchaseRequestService.findHistory(id); }
 
+    /** Moves the requisition to the trash (admins only); it can be restored later. */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable long id) { purchaseRequestService.deletePermanently(id); }
+    public void moveToTrash(@PathVariable long id, Authentication authentication) {
+        purchaseRequestService.moveToTrash(id, authentication.getName());
+    }
+
+    @GetMapping("/trash")
+    public List<DeletedPurchaseRequestResponse> findInTrash() {
+        return purchaseRequestService.findInTrash();
+    }
+
+    @PostMapping("/{id}/restore")
+    public PurchaseRequestResponse restoreFromTrash(@PathVariable long id, Authentication authentication) {
+        return purchaseRequestService.restoreFromTrash(id, authentication.getName());
+    }
 }

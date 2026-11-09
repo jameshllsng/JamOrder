@@ -1,5 +1,6 @@
 package br.com.jamorder.purchaserequest.repository;
 
+import br.com.jamorder.purchaserequest.domain.DeletedPurchaseRequestSummary;
 import br.com.jamorder.purchaserequest.domain.Priority;
 import br.com.jamorder.purchaserequest.domain.PurchaseRequest;
 import br.com.jamorder.purchaserequest.domain.PurchaseRequestStatus;
@@ -58,7 +59,7 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                 SELECT id, request_number, department, requester_name, requested_on, totvs_requested_on,
                        purchase_reason, priority, cost_center, status, notes, created_at, updated_at
                 FROM purchase_requests
-                WHERE id = ?
+                WHERE id = ? AND deleted_at IS NULL
                 """;
 
         return jdbcTemplate.query(sql, PURCHASE_REQUEST_ROW_MAPPER, id).stream().findFirst();
@@ -70,7 +71,7 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                 SELECT id, request_number, department, requester_name, requested_on, totvs_requested_on,
                        purchase_reason, priority, cost_center, status, notes, created_at, updated_at
                 FROM purchase_requests
-                WHERE id = ?
+                WHERE id = ? AND deleted_at IS NULL
                 FOR UPDATE
                 """;
 
@@ -88,6 +89,7 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                        COALESCE(SUM(item.total_value), 0) AS total_value
                 FROM purchase_requests request
                 LEFT JOIN purchase_request_items item ON item.purchase_request_id = request.id
+                WHERE request.deleted_at IS NULL
                 GROUP BY request.id
                 ORDER BY request.created_at DESC
                 """;
@@ -114,7 +116,7 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                 SET request_number = ?, department = ?, requested_on = ?, totvs_requested_on = ?,
                     purchase_reason = ?, priority = ?, cost_center = ?, status = ?, notes = ?,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                WHERE id = ? AND deleted_at IS NULL
                 """;
 
         int updatedRows = jdbcTemplate.update(
@@ -136,14 +138,50 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
     @Override
     public Optional<PurchaseRequest> updateStatus(long id, PurchaseRequestStatus status) {
         int updatedRows = jdbcTemplate.update(
-                "UPDATE purchase_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                "UPDATE purchase_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL",
                 status.name(), id);
         return updatedRows == 0 ? Optional.empty() : findById(id);
     }
 
     @Override
-    public void deleteById(long id) {
-        jdbcTemplate.update("DELETE FROM purchase_requests WHERE id = ?", id);
+    public boolean moveToTrash(long id, String deletedBy) {
+        return jdbcTemplate.update(
+                "UPDATE purchase_requests SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ? WHERE id = ? AND deleted_at IS NULL",
+                deletedBy, id) == 1;
+    }
+
+    @Override
+    public List<DeletedPurchaseRequestSummary> findInTrash() {
+        String sql = """
+                SELECT request.id, request.request_number, request.department, request.requester_name,
+                       request.purchase_reason, request.status, request.deleted_at, request.deleted_by,
+                       COUNT(item.id) AS item_count,
+                       COALESCE(SUM(item.total_value), 0) AS total_value
+                FROM purchase_requests request
+                LEFT JOIN purchase_request_items item ON item.purchase_request_id = request.id
+                WHERE request.deleted_at IS NOT NULL
+                GROUP BY request.id
+                ORDER BY request.deleted_at DESC
+                """;
+
+        return jdbcTemplate.query(sql, (resultSet, rowNumber) -> new DeletedPurchaseRequestSummary(
+                resultSet.getLong("id"),
+                resultSet.getString("request_number"),
+                resultSet.getString("department"),
+                resultSet.getString("requester_name"),
+                resultSet.getString("purchase_reason"),
+                PurchaseRequestStatus.valueOf(resultSet.getString("status")),
+                resultSet.getInt("item_count"),
+                resultSet.getBigDecimal("total_value"),
+                resultSet.getTimestamp("deleted_at").toInstant(),
+                resultSet.getString("deleted_by")));
+    }
+
+    @Override
+    public boolean restoreFromTrash(long id) {
+        return jdbcTemplate.update(
+                "UPDATE purchase_requests SET deleted_at = NULL, deleted_by = NULL WHERE id = ? AND deleted_at IS NOT NULL",
+                id) == 1;
     }
 
     private static class PurchaseRequestRowMapper implements RowMapper<PurchaseRequest> {

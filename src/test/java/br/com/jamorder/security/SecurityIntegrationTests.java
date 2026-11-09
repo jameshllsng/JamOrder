@@ -110,6 +110,29 @@ class SecurityIntegrationTests {
     }
 
     @Test
+    @WithMockUser(roles = "BUYER")
+    void onlyAdminCanSeeTrash() throws Exception {
+        mockMvc.perform(get("/api/purchase-requests/trash"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/trash.html"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanSeeTrash() throws Exception {
+        mockMvc.perform(get("/api/purchase-requests/trash"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "REQUESTER")
+    void requesterCannotRestoreFromTrash() throws Exception {
+        mockMvc.perform(post("/api/purchase-requests/1/restore").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(roles = "REQUESTER")
     void requesterNeedsCsrfTokenToCreatePurchaseRequest() throws Exception {
         mockMvc.perform(post("/api/purchase-requests")

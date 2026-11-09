@@ -2,6 +2,7 @@ package br.com.jamorder.purchaserequest.service;
 
 import br.com.jamorder.purchaserequest.api.CreatePurchaseRequestItemRequest;
 import br.com.jamorder.purchaserequest.api.CreatePurchaseRequestRequest;
+import br.com.jamorder.purchaserequest.api.DeletedPurchaseRequestResponse;
 import br.com.jamorder.purchaserequest.api.PurchaseRequestHistoryResponse;
 import br.com.jamorder.purchaserequest.api.PurchaseRequestItemResponse;
 import br.com.jamorder.purchaserequest.api.PurchaseRequestResponse;
@@ -34,7 +35,8 @@ import java.util.Set;
  * <p>Lifecycle: a requisition without a TOTVS number is a {@code DRAFT} (an item noted
  * to be registered later). Informing the TOTVS number and date makes it {@code OPEN};
  * receipts then move it to {@code PARTIALLY_RECEIVED} and {@code COMPLETED}. Drafts and
- * open requisitions can be edited or cancelled.
+ * open requisitions can be edited or cancelled. Admins can move any requisition to the trash
+ * and restore it later; trashed requisitions are invisible to every other operation.
  */
 @Service
 public class PurchaseRequestService {
@@ -43,8 +45,6 @@ public class PurchaseRequestService {
             Set.of(PurchaseRequestStatus.DRAFT, PurchaseRequestStatus.OPEN);
     private static final Set<PurchaseRequestStatus> RECEIVABLE_STATUSES =
             Set.of(PurchaseRequestStatus.OPEN, PurchaseRequestStatus.PARTIALLY_RECEIVED);
-    private static final Set<PurchaseRequestStatus> DELETABLE_STATUSES =
-            Set.of(PurchaseRequestStatus.CANCELLED, PurchaseRequestStatus.COMPLETED);
 
     private final PurchaseRequestRepository purchaseRequestRepository;
     private final PurchaseRequestItemRepository purchaseRequestItemRepository;
@@ -190,12 +190,38 @@ public class PurchaseRequestService {
         purchaseRequestHistoryRepository.insert(id, "CANCELLED", actorUsername, "Compra cancelada.");
     }
 
+    /** Moves the requisition to the trash: it disappears from regular use but stays restorable by admins. */
     @Transactional
-    public void deletePermanently(long id) {
-        PurchaseRequest current = findExistingForUpdate(id);
-        requireStatus(current, DELETABLE_STATUSES);
-        purchaseRequestItemRepository.deleteByPurchaseRequestId(id);
-        purchaseRequestRepository.deleteById(id);
+    public void moveToTrash(long id, String actorUsername) {
+        findExistingForUpdate(id);
+        purchaseRequestRepository.moveToTrash(id, actorUsername);
+        purchaseRequestHistoryRepository.insert(id, "DELETED", actorUsername, "Requisição movida para a lixeira.");
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeletedPurchaseRequestResponse> findInTrash() {
+        return purchaseRequestRepository.findInTrash().stream()
+                .map(deleted -> new DeletedPurchaseRequestResponse(
+                        deleted.id(),
+                        deleted.requestNumber(),
+                        deleted.department(),
+                        deleted.requesterName(),
+                        deleted.purchaseReason(),
+                        deleted.status(),
+                        deleted.itemCount(),
+                        deleted.totalValue(),
+                        deleted.deletedAt(),
+                        deleted.deletedBy()))
+                .toList();
+    }
+
+    @Transactional
+    public PurchaseRequestResponse restoreFromTrash(long id, String actorUsername) {
+        if (!purchaseRequestRepository.restoreFromTrash(id)) {
+            throw new PurchaseRequestNotFoundException(id);
+        }
+        purchaseRequestHistoryRepository.insert(id, "RESTORED", actorUsername, "Requisição restaurada da lixeira.");
+        return getById(id);
     }
 
     private PurchaseRequest findExisting(long id) {
