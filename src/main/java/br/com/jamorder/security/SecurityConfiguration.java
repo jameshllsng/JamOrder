@@ -30,6 +30,7 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/login.html", "/login.js", "/styles.css", "/api/csrf", "/actuator/health").permitAll()
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/purchase-requests/*/cancel").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/purchase-requests/*/items/*/receipts").hasAnyRole("ADMIN", "BUYER")
                         .requestMatchers(HttpMethod.DELETE, "/api/purchase-requests/**").hasRole("ADMIN")
