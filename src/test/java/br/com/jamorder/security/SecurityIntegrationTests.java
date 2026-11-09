@@ -96,6 +96,20 @@ class SecurityIntegrationTests {
     }
 
     @Test
+    @WithMockUser(roles = "BUYER")
+    void buyerCannotManageUsers() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminCanListUsers() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @WithMockUser(roles = "REQUESTER")
     void requesterNeedsCsrfTokenToCreatePurchaseRequest() throws Exception {
         mockMvc.perform(post("/api/purchase-requests")
@@ -116,7 +130,7 @@ class SecurityIntegrationTests {
 
     private String validRequestBody() {
         return """
-                {"requestNumber":"REQ-%s","department":"Infrastructure","requesterName":"Security Test","requestedOn":"2026-09-23","purchaseReason":"Security test request.","priority":"HIGH","items":[{"description":"Network switch","quantity":1,"totalValue":1200.00}]}
+                {"requestNumber":"REQ-%s","department":"Infrastructure","requestedOn":"2026-09-23","totvsRequestedOn":"2026-09-23","purchaseReason":"Security test request.","priority":"HIGH","items":[{"description":"Network switch","quantity":1,"totalValue":1200.00}]}
                 """.formatted(UUID.randomUUID());
     }
 }

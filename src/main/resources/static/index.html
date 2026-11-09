@@ -18,6 +18,7 @@
         </div>
         <nav class="sidebar-navigation" aria-label="Seções do sistema">
             <a class="navigation-item navigation-item-active" href="/" aria-current="page"><span aria-hidden="true">■</span> Requisições</a>
+            <a class="navigation-item" id="users-navigation" href="/users.html" hidden><span aria-hidden="true">■</span> Usuários</a>
         </nav>
         <p class="sidebar-footnote">Acompanhamento de compras</p>
     </aside>
@@ -26,7 +27,7 @@
         <div class="application-context">
             <p class="eyebrow">Operação</p>
             <h1>Requisições de compra</h1>
-            <p>Acompanhe solicitações e seus próximos passos.</p>
+            <p>Acompanhe as requisições lançadas no TOTVS até a entrega.</p>
         </div>
         <div class="account-actions">
             <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Ativar modo claro" title="Ativar modo claro">☀</button>
@@ -46,21 +47,30 @@
                 <h2 id="requests-title">Requisições</h2>
                 <p id="request-count">Carregando dados...</p>
             </div>
-            <button class="button button-quiet" id="refresh-list" type="button">Atualizar</button>
+            <div class="heading-actions">
+                <select id="status-filter" aria-label="Filtrar requisições">
+                    <option value="ALL">Todas</option>
+                    <option value="DRAFT">Faltam lançar no TOTVS</option>
+                    <option value="PENDING_RECEIPT" selected>Aguardando entrega</option>
+                    <option value="COMPLETED">Concluídas</option>
+                    <option value="CANCELLED">Canceladas</option>
+                </select>
+                <button class="button button-quiet" id="refresh-list" type="button">Atualizar</button>
+            </div>
         </div>
         <div class="table-wrapper">
             <table>
                 <thead>
                 <tr>
-                    <th>Número</th>
+                    <th>Nº TOTVS</th>
                     <th>Setor</th>
                     <th>Solicitante</th>
                     <th>Motivo</th>
                     <th>Prioridade</th>
                     <th>Status</th>
-                    <th>Solicitada em</th>
+                    <th>Lançada no TOTVS</th>
                     <th>Em aberto</th>
-                    <th>Itens</th>
+                    <th>Itens pendentes</th>
                     <th>Valor total</th>
                     <th>Ações</th>
                 </tr>
@@ -69,8 +79,8 @@
             </table>
         </div>
         <div class="empty-state" id="empty-state" hidden>
-            <strong>Nenhuma requisição cadastrada.</strong>
-            <p>Crie a primeira solicitação para iniciar o acompanhamento.</p>
+            <strong id="empty-state-title">Nenhuma requisição cadastrada.</strong>
+            <p>Cadastre uma requisição do TOTVS ou anote um rascunho para lançar depois.</p>
             <button class="button button-primary" id="open-create-empty" type="button">Nova requisição</button>
         </div>
     </section>
@@ -114,20 +124,19 @@
     <form id="create-request-form">
         <div class="dialog-header">
             <div>
-                <h2>Nova requisição</h2>
-                <p>Registre os itens solicitados para acompanhamento.</p>
+                <h2 id="request-form-title">Nova requisição</h2>
+                <p>Sem número do TOTVS, a requisição fica salva como rascunho para lançar depois.</p>
             </div>
             <button class="icon-button" id="close-create-form" type="button" aria-label="Fechar">×</button>
         </div>
         <div class="form-grid">
-            <label>Número da requisição<input name="requestNumber" maxlength="50" required></label>
-            <label>Setor<input name="department" maxlength="120" required></label>
-            <label>Solicitante<input name="requesterName" maxlength="150" required></label>
-            <label>Data da solicitação<input name="requestedOn" type="date" required></label>
-            <label>Prioridade<select name="priority" required><option value="LOW">Baixa</option><option value="MEDIUM" selected>Média</option><option value="HIGH">Alta</option></select></label>
+            <label>Nº da requisição no TOTVS <span class="form-hint">(vazio = rascunho)</span><input name="requestNumber" maxlength="50"></label>
+            <label>Data da requisição no TOTVS<input name="totvsRequestedOn" type="date"></label>
+            <label>Data do pedido<input name="requestedOn" type="date" required></label>
+            <label>Solicitante<input name="requesterName" maxlength="150" readonly></label>
+            <label>Setor<input name="department" maxlength="120" value="TI" required></label>
             <label>Centro de custo<input name="costCenter" maxlength="80"></label>
-            <label>Comprador<input name="buyerName" maxlength="150"></label>
-            <label>Gestor<input name="managerName" maxlength="150"></label>
+            <label>Prioridade<select name="priority" required><option value="LOW">Baixa</option><option value="MEDIUM" selected>Média</option><option value="HIGH">Alta</option><option value="URGENT">Urgente</option></select></label>
             <label class="full-width">Motivo da compra<textarea name="purchaseReason" rows="3" required></textarea></label>
             <label class="full-width">Observações<textarea name="notes" rows="2"></textarea></label>
         </div>
@@ -153,7 +162,7 @@
             <label>Marca ou modelo<input class="item-brand-model" maxlength="250"></label>
             <label>Quantidade<input class="item-quantity" type="number" min="1" step="1" value="1" required></label>
             <label>Fornecedor<input class="item-supplier-name" maxlength="200"></label>
-            <label>Valor total<input class="item-total-value" type="number" min="0" step="0.01" value="0.00" required></label>
+            <label>Valor total <span class="form-hint">(opcional)</span><input class="item-total-value" type="number" min="0" step="0.01"></label>
             <label class="full-width">Observações<input class="item-notes" maxlength="2000"></label>
         </div>
     </fieldset>

@@ -13,6 +13,8 @@ public interface PurchaseRequestRepository {
 
     Optional<PurchaseRequest> findById(long id);
 
+    Optional<PurchaseRequest> findByIdForUpdate(long id);
+
     List<PurchaseRequestSummary> findAll();
 
     Optional<PurchaseRequest> update(PurchaseRequest purchaseRequest);

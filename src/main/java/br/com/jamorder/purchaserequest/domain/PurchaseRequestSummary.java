@@ -12,6 +12,8 @@ public record PurchaseRequestSummary(
         Priority priority,
         PurchaseRequestStatus status,
         LocalDate requestedOn,
+        LocalDate totvsRequestedOn,
         int itemCount,
+        int pendingItemCount,
         BigDecimal totalValue) {
 }

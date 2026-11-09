@@ -11,41 +11,37 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Without a TOTVS request number the requisition is saved as a draft; with it, the
+ * TOTVS request date is required and the requisition starts being tracked.
+ */
 public record CreatePurchaseRequestRequest(
-        @NotBlank(message = "O nÃºmero da requisiÃ§Ã£o Ã© obrigatÃ³rio.")
-        @Size(max = 50, message = "O nÃºmero da requisiÃ§Ã£o deve ter no mÃ¡ximo 50 caracteres.")
+        @Size(max = 50, message = "O número da requisição deve ter no máximo 50 caracteres.")
         String requestNumber,
 
-        @NotBlank(message = "O setor Ã© obrigatÃ³rio.")
-        @Size(max = 120, message = "O setor deve ter no mÃ¡ximo 120 caracteres.")
+        @NotBlank(message = "O setor é obrigatório.")
+        @Size(max = 120, message = "O setor deve ter no máximo 120 caracteres.")
         String department,
 
-        @NotBlank(message = "O solicitante Ã© obrigatÃ³rio.")
-        @Size(max = 150, message = "O solicitante deve ter no mÃ¡ximo 150 caracteres.")
-        String requesterName,
-
-        @NotNull(message = "A data da solicitaÃ§Ã£o Ã© obrigatÃ³ria.")
-        @PastOrPresent(message = "A data da solicitaÃ§Ã£o nÃ£o pode estar no futuro.")
+        @NotNull(message = "A data do pedido é obrigatória.")
+        @PastOrPresent(message = "A data do pedido não pode estar no futuro.")
         LocalDate requestedOn,
 
-        @NotBlank(message = "O motivo da compra Ã© obrigatÃ³rio.")
+        @PastOrPresent(message = "A data da requisição no TOTVS não pode estar no futuro.")
+        LocalDate totvsRequestedOn,
+
+        @NotBlank(message = "O motivo da compra é obrigatório.")
         String purchaseReason,
 
-        @NotNull(message = "A prioridade Ã© obrigatÃ³ria.")
+        @NotNull(message = "A prioridade é obrigatória.")
         Priority priority,
 
-        @Size(max = 150, message = "O comprador deve ter no mÃ¡ximo 150 caracteres.")
-        String buyerName,
-
-        @Size(max = 150, message = "O gestor deve ter no mÃ¡ximo 150 caracteres.")
-        String managerName,
-
-        @Size(max = 80, message = "O centro de custo deve ter no mÃ¡ximo 80 caracteres.")
+        @Size(max = 80, message = "O centro de custo deve ter no máximo 80 caracteres.")
         String costCenter,
 
-        @Size(max = 5000, message = "As observaÃ§Ãµes devem ter no mÃ¡ximo 5000 caracteres.")
+        @Size(max = 5000, message = "As observações devem ter no máximo 5000 caracteres.")
         String notes,
 
-        @NotEmpty(message = "A requisiÃ§Ã£o deve possuir ao menos um item.")
+        @NotEmpty(message = "A requisição deve possuir ao menos um item.")
         List<@Valid CreatePurchaseRequestItemRequest> items) {
 }

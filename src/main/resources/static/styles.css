@@ -112,8 +112,8 @@ tbody tr:hover { background: #f8fbff; }
 .priority-medium { background: #fff4d7; color: #805b17; }
 .priority-low { background: #e3f2e9; color: #21663b; }
 .status-open { background: #e5effb; color: #245898; }
-.status-pending-approval { background: #fff4d7; color: #805b17; }
-.status-approved, .status-in-purchase { background: #e9ecfb; color: #424b96; }
+.status-draft { background: #fff4d7; color: #805b17; border: 1px dashed #c99a3a; }
+.priority-urgent { background: #9b3029; color: #fff; }
 .status-partially-received { background: #fff0df; color: #92571f; }
 .status-completed { background: #e3f2e9; color: #21663b; }
 .status-cancelled { background: #e8ebef; color: #505965; }
@@ -139,6 +139,7 @@ textarea { resize: vertical; }
 .item-form legend { color: #586372; font-size: 0.8rem; font-weight: 700; padding: 0 5px; }
 .form-actions { border-top: 1px solid #d8dde5; justify-content: flex-end; margin-top: 22px; padding-top: 18px; }
 .form-message { background: #fff0ef; border: 1px solid #ebbbb7; border-radius: 4px; color: #9b3029; margin: 16px 0 0; padding: 10px; }
+.form-message-success { background: #e3f2e9; border-color: #a6d2b6; color: #21663b; }
 .operation-feedback { box-shadow: 0 8px 20px rgba(22, 31, 43, 0.18); color: #fff; font-size: 0.86rem; left: 50%; padding: 10px 14px; position: fixed; top: 20px; transform: translateX(-50%); z-index: 10; }
 .operation-feedback-success { background: #21663b; }
 .operation-feedback-warning { background: #805b17; }
@@ -271,3 +272,10 @@ body:not(.theme-light) .empty-state strong { color: #e6edf3; }
     .page-shell { padding: 18px 16px 32px; }
     .application-context h1 { font-size: 1.16rem; }
 }
+.heading-actions { align-items: center; display: flex; gap: 8px; }
+.heading-actions select { width: auto; }
+.form-hint { color: #69727f; font-size: 0.76rem; font-weight: 400; }
+.receipt-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.receipt-actions details summary { cursor: pointer; font-size: 0.8rem; }
+.draft-number { font-style: italic; opacity: 0.8; }
+body:not(.theme-light) .form-hint { color: #aeb8c5; }

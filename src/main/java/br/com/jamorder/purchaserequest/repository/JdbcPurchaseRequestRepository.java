@@ -8,9 +8,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,9 +29,9 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
     public PurchaseRequest insert(PurchaseRequest purchaseRequest) {
         String sql = """
                 INSERT INTO purchase_requests (
-                    request_number, department, requester_name, requested_on, purchase_reason,
-                    priority, buyer_name, manager_name, cost_center, status, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    request_number, department, requester_name, requested_on, totvs_requested_on,
+                    purchase_reason, priority, cost_center, status, notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING id
                 """;
 
@@ -42,10 +42,9 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                 purchaseRequest.department(),
                 purchaseRequest.requesterName(),
                 purchaseRequest.requestedOn(),
+                purchaseRequest.totvsRequestedOn(),
                 purchaseRequest.purchaseReason(),
                 purchaseRequest.priority().name(),
-                purchaseRequest.buyerName(),
-                purchaseRequest.managerName(),
                 purchaseRequest.costCenter(),
                 purchaseRequest.status().name(),
                 purchaseRequest.notes());
@@ -56,10 +55,23 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
     @Override
     public Optional<PurchaseRequest> findById(long id) {
         String sql = """
-                SELECT id, request_number, department, requester_name, requested_on, purchase_reason,
-                       priority, buyer_name, manager_name, cost_center, status, notes, created_at, updated_at
+                SELECT id, request_number, department, requester_name, requested_on, totvs_requested_on,
+                       purchase_reason, priority, cost_center, status, notes, created_at, updated_at
                 FROM purchase_requests
                 WHERE id = ?
+                """;
+
+        return jdbcTemplate.query(sql, PURCHASE_REQUEST_ROW_MAPPER, id).stream().findFirst();
+    }
+
+    @Override
+    public Optional<PurchaseRequest> findByIdForUpdate(long id) {
+        String sql = """
+                SELECT id, request_number, department, requester_name, requested_on, totvs_requested_on,
+                       purchase_reason, priority, cost_center, status, notes, created_at, updated_at
+                FROM purchase_requests
+                WHERE id = ?
+                FOR UPDATE
                 """;
 
         return jdbcTemplate.query(sql, PURCHASE_REQUEST_ROW_MAPPER, id).stream().findFirst();
@@ -70,7 +82,9 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
         String sql = """
                 SELECT request.id, request.request_number, request.department, request.requester_name,
                        request.purchase_reason, request.priority, request.status, request.requested_on,
+                       request.totvs_requested_on,
                        COUNT(item.id) AS item_count,
+                       COUNT(item.id) FILTER (WHERE item.status IN ('PENDING', 'PARTIALLY_RECEIVED')) AS pending_item_count,
                        COALESCE(SUM(item.total_value), 0) AS total_value
                 FROM purchase_requests request
                 LEFT JOIN purchase_request_items item ON item.purchase_request_id = request.id
@@ -86,8 +100,10 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                 resultSet.getString("purchase_reason"),
                 Priority.valueOf(resultSet.getString("priority")),
                 PurchaseRequestStatus.valueOf(resultSet.getString("status")),
-                resultSet.getObject("requested_on", java.time.LocalDate.class),
+                resultSet.getObject("requested_on", LocalDate.class),
+                resultSet.getObject("totvs_requested_on", LocalDate.class),
                 resultSet.getInt("item_count"),
+                resultSet.getInt("pending_item_count"),
                 resultSet.getBigDecimal("total_value")));
     }
 
@@ -95,9 +111,9 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
     public Optional<PurchaseRequest> update(PurchaseRequest purchaseRequest) {
         String sql = """
                 UPDATE purchase_requests
-                SET request_number = ?, department = ?, requester_name = ?, requested_on = ?,
-                    purchase_reason = ?, priority = ?, buyer_name = ?, manager_name = ?,
-                    cost_center = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+                SET request_number = ?, department = ?, requested_on = ?, totvs_requested_on = ?,
+                    purchase_reason = ?, priority = ?, cost_center = ?, status = ?, notes = ?,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """;
 
@@ -105,13 +121,12 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                 sql,
                 purchaseRequest.requestNumber(),
                 purchaseRequest.department(),
-                purchaseRequest.requesterName(),
                 purchaseRequest.requestedOn(),
+                purchaseRequest.totvsRequestedOn(),
                 purchaseRequest.purchaseReason(),
                 purchaseRequest.priority().name(),
-                purchaseRequest.buyerName(),
-                purchaseRequest.managerName(),
                 purchaseRequest.costCenter(),
+                purchaseRequest.status().name(),
                 purchaseRequest.notes(),
                 purchaseRequest.id());
 
@@ -120,7 +135,9 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
 
     @Override
     public Optional<PurchaseRequest> updateStatus(long id, PurchaseRequestStatus status) {
-        int updatedRows = jdbcTemplate.update("UPDATE purchase_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", status.name(), id);
+        int updatedRows = jdbcTemplate.update(
+                "UPDATE purchase_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                status.name(), id);
         return updatedRows == 0 ? Optional.empty() : findById(id);
     }
 
@@ -138,11 +155,10 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                     resultSet.getString("request_number"),
                     resultSet.getString("department"),
                     resultSet.getString("requester_name"),
-                    resultSet.getObject("requested_on", java.time.LocalDate.class),
+                    resultSet.getObject("requested_on", LocalDate.class),
+                    resultSet.getObject("totvs_requested_on", LocalDate.class),
                     resultSet.getString("purchase_reason"),
                     Priority.valueOf(resultSet.getString("priority")),
-                    resultSet.getString("buyer_name"),
-                    resultSet.getString("manager_name"),
                     resultSet.getString("cost_center"),
                     PurchaseRequestStatus.valueOf(resultSet.getString("status")),
                     resultSet.getString("notes"),
