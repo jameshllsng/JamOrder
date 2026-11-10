@@ -19,11 +19,16 @@ public interface PurchaseRequestRepository {
 
     Optional<PurchaseRequest> findByIdForUpdate(long id);
 
-    List<PurchaseRequestSummary> findAll();
+    /** @param departmentId only requisitions of this department, or every department when {@code null} */
+    List<PurchaseRequestSummary> findAll(Long departmentId);
 
     Optional<PurchaseRequest> update(PurchaseRequest purchaseRequest);
 
     Optional<PurchaseRequest> updateStatus(long id, PurchaseRequestStatus status);
+
+    void approve(long id, String approvedBy);
+
+    void revokeApproval(long id);
 
     boolean moveToTrash(long id, String deletedBy);
 

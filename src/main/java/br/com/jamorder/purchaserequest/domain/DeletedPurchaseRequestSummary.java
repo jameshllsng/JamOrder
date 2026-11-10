@@ -6,7 +6,7 @@ import java.time.Instant;
 public record DeletedPurchaseRequestSummary(
         Long id,
         String requestNumber,
-        String department,
+        String departmentName,
         String requesterName,
         String purchaseReason,
         PurchaseRequestStatus status,

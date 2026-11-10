@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usuários · JamOrder</title>
+    <title>Usuários e setores · JamOrder</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -22,7 +22,7 @@
     </aside>
     <main class="page-shell">
         <header class="application-header">
-            <div class="application-context"><p class="eyebrow">Administração</p><h1>Usuários</h1><p>Controle os acessos locais ao JamOrder.</p></div>
+            <div class="application-context"><p class="eyebrow">Administração</p><h1>Usuários e setores</h1><p>Controle os acessos locais e a que setor cada pessoa pertence.</p></div>
             <div class="account-actions"><button class="button button-quiet" id="logout" type="button">Sair</button></div>
         </header>
         <section class="requests-section">
@@ -32,13 +32,23 @@
                 <label>Nome<input name="displayName" maxlength="150" required></label>
                 <label>Senha temporária<input name="password" type="password" minlength="12" maxlength="100" required></label>
                 <label>Papel<select name="role"><option value="REQUESTER">Solicitante</option><option value="BUYER">Comprador</option><option value="MANAGER">Gestor</option><option value="ADMIN">Administrador</option></select></label>
+                <label>Setor<select name="departmentId" class="department-select"></select></label>
+                <p class="form-hint full-width">Usuários de um setor só veem as requisições desse setor. "Todos os setores" e administradores veem tudo.</p>
                 <p class="form-message full-width" id="create-user-message" role="alert" hidden></p>
                 <div class="full-width"><button class="button button-primary" id="create-user-button" type="submit">Criar usuário</button></div>
             </form>
         </section>
         <section class="requests-section">
             <div class="section-heading"><div><h2>Acessos cadastrados</h2><p id="user-count">Carregando dados...</p></div><button class="button button-quiet" id="refresh-users" type="button">Atualizar</button></div>
-            <div class="table-wrapper"><table><thead><tr><th>Login</th><th>Nome</th><th>Papel</th><th>Status</th><th>Ações</th></tr></thead><tbody id="user-table-body"></tbody></table></div>
+            <div class="table-wrapper"><table><thead><tr><th>Login</th><th>Nome</th><th>Papel</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="user-table-body"></tbody></table></div>
+        </section>
+        <section class="requests-section">
+            <div class="section-heading"><div><h2>Setores</h2><p id="department-count">Carregando dados...</p></div></div>
+            <form class="form-grid" id="create-department-form" novalidate>
+                <label>Nome do setor<input name="name" maxlength="120" required></label>
+                <div><button class="button button-primary" type="submit">Adicionar setor</button></div>
+            </form>
+            <div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Status</th><th>Ações</th></tr></thead><tbody id="department-table-body"></tbody></table></div>
         </section>
     </main>
 </div>

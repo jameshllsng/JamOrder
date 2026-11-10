@@ -1,5 +1,7 @@
 package br.com.jamorder.security;
 
+import br.com.jamorder.department.DepartmentService;
+import br.com.jamorder.department.SaveDepartmentRequest;
 import br.com.jamorder.user.JdbcLocalUserRepository;
 import br.com.jamorder.user.LocalUser;
 import br.com.jamorder.user.UserRole;
@@ -39,12 +41,18 @@ class SecurityIntegrationTests {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private DepartmentService departmentService;
+
     private String username;
+    private long departmentId;
 
     @BeforeEach
     void createUser() {
         username = "security-" + UUID.randomUUID();
-        userRepository.insert(new LocalUser(null, username, passwordEncoder.encode("correct-password"), "Security Test", UserRole.REQUESTER, true));
+        userRepository.insert(new LocalUser(null, username, passwordEncoder.encode("correct-password"), "Security Test", UserRole.REQUESTER, true, null));
+        departmentId = departmentService.create(new SaveDepartmentRequest("Security Dept " + UUID.randomUUID(), true)).id();
+        userRepository.insert(new LocalUser(null, "security-requester", passwordEncoder.encode("correct-password"), "Security Requester", UserRole.REQUESTER, true, null));
     }
 
     @Test
@@ -133,6 +141,38 @@ class SecurityIntegrationTests {
     }
 
     @Test
+    @WithMockUser(username = "security-requester", roles = "REQUESTER")
+    void requesterIsAllowedToRegisterReceipts() throws Exception {
+        // Not 403: the request passes security and only fails because the requisition does not exist.
+        mockMvc.perform(post("/api/purchase-requests/0/items/0/receipts")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"receivedQuantity\":1,\"receivedOn\":\"2026-09-23\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser(roles = "BUYER")
+    void buyerCannotApprovePurchaseRequest() throws Exception {
+        mockMvc.perform(post("/api/purchase-requests/1/approval").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "MANAGER")
+    void managerCanListDepartmentsButNotCreateThem() throws Exception {
+        mockMvc.perform(get("/api/departments"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/departments")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Fictional\",\"active\":true}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/users.html"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser(roles = "REQUESTER")
     void requesterNeedsCsrfTokenToCreatePurchaseRequest() throws Exception {
         mockMvc.perform(post("/api/purchase-requests")
@@ -142,7 +182,7 @@ class SecurityIntegrationTests {
     }
 
     @Test
-    @WithMockUser(roles = "REQUESTER")
+    @WithMockUser(username = "security-requester", roles = "REQUESTER")
     void requesterCanCreatePurchaseRequestWithCsrfToken() throws Exception {
         mockMvc.perform(post("/api/purchase-requests")
                         .with(csrf())
@@ -153,7 +193,7 @@ class SecurityIntegrationTests {
 
     private String validRequestBody() {
         return """
-                {"requestNumber":"REQ-%s","department":"Infrastructure","requestedOn":"2026-09-23","totvsRequestedOn":"2026-09-23","purchaseReason":"Security test request.","priority":"HIGH","items":[{"description":"Network switch","quantity":1,"totalValue":1200.00}]}
-                """.formatted(UUID.randomUUID());
+                {"requestNumber":"REQ-%s","departmentId":%d,"requestedOn":"2026-09-23","totvsRequestedOn":"2026-09-23","purchaseReason":"Security test request.","priority":"HIGH","items":[{"description":"Network switch","quantity":1,"totalValue":1200.00}]}
+                """.formatted(UUID.randomUUID(), departmentId);
     }
 }

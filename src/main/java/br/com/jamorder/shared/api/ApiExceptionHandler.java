@@ -1,5 +1,6 @@
 package br.com.jamorder.shared.api;
 
+import br.com.jamorder.department.DepartmentException;
 import br.com.jamorder.purchaserequest.service.DuplicatePurchaseRequestNumberException;
 import br.com.jamorder.purchaserequest.service.InvalidTotvsRegistrationException;
 import br.com.jamorder.purchaserequest.service.PurchaseRequestItemNotFoundException;
@@ -48,6 +49,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(InvalidTotvsRegistrationException.class)
     public ResponseEntity<ProblemDetail> handleInvalidTotvsRegistration(InvalidTotvsRegistrationException exception) {
+        return problem(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(DepartmentException.class)
+    public ResponseEntity<ProblemDetail> handleDepartment(DepartmentException exception) {
         return problem(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 

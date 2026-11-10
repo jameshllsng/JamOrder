@@ -30,7 +30,7 @@ async function loadTrash() {
 function createRow(request) {
     const row = document.createElement("tr");
     appendCell(row, request.requestNumber ?? "Rascunho");
-    appendCell(row, request.department);
+    appendCell(row, request.departmentName);
     appendCell(row, request.requesterName);
     appendCell(row, request.purchaseReason);
     appendCell(row, statusLabels[request.status] ?? request.status);
@@ -59,7 +59,7 @@ async function restoreRequest(request, button) {
 }
 
 function appendCell(row, value) { const cell = document.createElement("td"); cell.textContent = value ?? "Não informado"; row.append(cell); }
-function formatCurrency(value) { return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value ?? 0); }
+function formatCurrency(value) { if (value === null || value === undefined) return "—"; return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value); }
 async function errorMessage(response) { const body = await response.json().catch(() => null); return body?.detail ?? "Não foi possível concluir a operação."; }
 function show(message, variant) { clearTimeout(feedbackTimeout); feedback.className = `operation-feedback operation-feedback-${variant}`; feedback.textContent = message; feedback.hidden = false; feedbackTimeout = window.setTimeout(() => feedback.hidden = true, 3200); }
 async function logout() { await fetch("/logout", { method: "POST", headers: { [csrfToken.headerName]: csrfToken.token } }); window.location.assign("/login.html"); }

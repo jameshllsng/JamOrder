@@ -1,5 +1,7 @@
 package br.com.jamorder.purchaserequest.service;
 
+import br.com.jamorder.department.DepartmentException;
+import br.com.jamorder.department.DepartmentService;
 import br.com.jamorder.purchaserequest.api.CreatePurchaseRequestItemRequest;
 import br.com.jamorder.purchaserequest.api.CreatePurchaseRequestRequest;
 import br.com.jamorder.purchaserequest.api.DeletedPurchaseRequestResponse;
@@ -20,6 +22,7 @@ import br.com.jamorder.purchaserequest.repository.PurchaseRequestRepository;
 import br.com.jamorder.user.JdbcLocalUserRepository;
 import br.com.jamorder.user.LocalUser;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,13 @@ import java.util.Set;
  * receipts then move it to {@code PARTIALLY_RECEIVED} and {@code COMPLETED}. Drafts and
  * open requisitions can be edited or cancelled. Admins can move any requisition to the trash
  * and restore it later; trashed requisitions are invisible to every other operation.
+ *
+ * <p>Department scope: users bound to a department only see and act on that department's
+ * requisitions; requisitions of other departments behave as if they did not exist.
+ * Admins and users without a department see every department.
+ *
+ * <p>Manager approval is informational: it is recorded and shown, but never blocks or
+ * changes the requisition lifecycle.
  */
 @Service
 public class PurchaseRequestService {
@@ -50,30 +60,34 @@ public class PurchaseRequestService {
     private final PurchaseRequestItemRepository purchaseRequestItemRepository;
     private final PurchaseRequestHistoryRepository purchaseRequestHistoryRepository;
     private final JdbcLocalUserRepository userRepository;
+    private final DepartmentService departmentService;
 
     public PurchaseRequestService(
             PurchaseRequestRepository purchaseRequestRepository,
             PurchaseRequestItemRepository purchaseRequestItemRepository,
             PurchaseRequestHistoryRepository purchaseRequestHistoryRepository,
-            JdbcLocalUserRepository userRepository) {
+            JdbcLocalUserRepository userRepository,
+            DepartmentService departmentService) {
         this.purchaseRequestRepository = purchaseRequestRepository;
         this.purchaseRequestItemRepository = purchaseRequestItemRepository;
         this.purchaseRequestHistoryRepository = purchaseRequestHistoryRepository;
         this.userRepository = userRepository;
+        this.departmentService = departmentService;
     }
 
     @Transactional
     public PurchaseRequestResponse create(CreatePurchaseRequestRequest request, String actorUsername) {
+        LocalUser actor = findActor(actorUsername);
         TotvsRegistration registration = TotvsRegistration.of(request.requestNumber(), request.totvsRequestedOn());
-        String requesterName = userRepository.findByUsername(actorUsername)
-                .map(LocalUser::displayName)
-                .orElse(actorUsername);
+        long departmentId = chooseDepartment(request.departmentId(), null, actor);
 
         PurchaseRequest saved = insertHandlingDuplicate(new PurchaseRequest(
                 null,
                 registration.requestNumber(),
-                request.department(),
-                requesterName,
+                departmentId,
+                null,
+                blankToNull(request.usageLocation()),
+                actor.displayName(),
                 request.requestedOn(),
                 registration.requestedOn(),
                 request.purchaseReason(),
@@ -82,28 +96,32 @@ public class PurchaseRequestService {
                 registration.status(),
                 request.notes(),
                 null,
+                null,
+                null,
                 null));
 
         insertItems(saved.id(), request.items());
         purchaseRequestHistoryRepository.insert(saved.id(), "CREATED", actorUsername,
                 registration.isRegistered() ? "Requisição cadastrada." : "Rascunho criado (falta lançar no TOTVS).");
-        return getById(saved.id());
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<PurchaseRequestSummaryResponse> findAll() {
-        return purchaseRequestRepository.findAll().stream().map(this::toSummaryResponse).toList();
+    public List<PurchaseRequestSummaryResponse> findAll(String actorUsername) {
+        LocalUser actor = findActor(actorUsername);
+        Long departmentId = actor.seesAllDepartments() ? null : actor.departmentId();
+        return purchaseRequestRepository.findAll(departmentId).stream().map(this::toSummaryResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public PurchaseRequestResponse getById(long id) {
-        PurchaseRequest purchaseRequest = findExisting(id);
-        return toResponse(purchaseRequest, purchaseRequestItemRepository.findByPurchaseRequestId(id));
+    public PurchaseRequestResponse getById(long id, String actorUsername) {
+        return toResponse(findVisible(id, findActor(actorUsername)));
     }
 
     @Transactional
     public PurchaseRequestResponse update(long id, UpdatePurchaseRequestRequest request, String actorUsername) {
-        PurchaseRequest current = findExistingForUpdate(id);
+        LocalUser actor = findActor(actorUsername);
+        PurchaseRequest current = findVisibleForUpdate(id, actor);
         requireStatus(current, EDITABLE_STATUSES);
 
         TotvsRegistration registration = TotvsRegistration.of(request.requestNumber(), request.totvsRequestedOn());
@@ -111,11 +129,14 @@ public class PurchaseRequestService {
             throw new InvalidTotvsRegistrationException(
                     "Uma requisição já lançada no TOTVS não pode voltar a ser rascunho.");
         }
+        long departmentId = chooseDepartment(request.departmentId(), current.departmentId(), actor);
 
         updateHandlingDuplicate(new PurchaseRequest(
                 current.id(),
                 registration.requestNumber(),
-                request.department(),
+                departmentId,
+                null,
+                blankToNull(request.usageLocation()),
                 current.requesterName(),
                 request.requestedOn(),
                 registration.requestedOn(),
@@ -124,6 +145,8 @@ public class PurchaseRequestService {
                 blankToNull(request.costCenter()),
                 registration.status(),
                 request.notes(),
+                current.approvedAt(),
+                current.approvedBy(),
                 current.createdAt(),
                 current.updatedAt()));
 
@@ -138,14 +161,14 @@ public class PurchaseRequestService {
         } else {
             purchaseRequestHistoryRepository.insert(id, "UPDATED", actorUsername, "Dados da compra atualizados.");
         }
-        return getById(id);
+        return toResponse(findExisting(id));
     }
 
     @Transactional
     public PurchaseRequestResponse registerReceipt(
             long requestId, long itemId, RegisterItemReceiptRequest request, String actorUsername) {
         // Locking the requisition serializes concurrent receipts so the final status is consistent.
-        PurchaseRequest purchaseRequest = findExistingForUpdate(requestId);
+        PurchaseRequest purchaseRequest = findVisibleForUpdate(requestId, findActor(actorUsername));
         requireStatus(purchaseRequest, RECEIVABLE_STATUSES);
 
         PurchaseRequestItem item = purchaseRequestItemRepository.findByIdForUpdate(itemId)
@@ -170,12 +193,37 @@ public class PurchaseRequestService {
 
         purchaseRequestHistoryRepository.insert(requestId, "RECEIPT_REGISTERED", actorUsername,
                 "Recebimento de " + request.receivedQuantity() + " unidade(s) do item " + item.description() + ".");
-        return getById(requestId);
+        return toResponse(findExisting(requestId));
+    }
+
+    /** Records the manager's approval. It is only informational and does not change the status. */
+    @Transactional
+    public PurchaseRequestResponse approve(long id, String actorUsername) {
+        LocalUser actor = findActor(actorUsername);
+        PurchaseRequest current = findVisibleForUpdate(id, actor);
+        if (current.status() == PurchaseRequestStatus.CANCELLED) {
+            throw new PurchaseRequestNotOpenException();
+        }
+        if (current.approvedAt() == null) {
+            purchaseRequestRepository.approve(id, actor.displayName());
+            purchaseRequestHistoryRepository.insert(id, "APPROVED", actorUsername, "Requisição aprovada pelo gestor.");
+        }
+        return toResponse(findExisting(id));
+    }
+
+    @Transactional
+    public PurchaseRequestResponse revokeApproval(long id, String actorUsername) {
+        PurchaseRequest current = findVisibleForUpdate(id, findActor(actorUsername));
+        if (current.approvedAt() != null) {
+            purchaseRequestRepository.revokeApproval(id);
+            purchaseRequestHistoryRepository.insert(id, "APPROVAL_REVOKED", actorUsername, "Aprovação do gestor removida.");
+        }
+        return toResponse(findExisting(id));
     }
 
     @Transactional(readOnly = true)
-    public List<PurchaseRequestHistoryResponse> findHistory(long id) {
-        findExisting(id);
+    public List<PurchaseRequestHistoryResponse> findHistory(long id, String actorUsername) {
+        findVisible(id, findActor(actorUsername));
         return purchaseRequestHistoryRepository.findByPurchaseRequestId(id).stream()
                 .map(entry -> new PurchaseRequestHistoryResponse(
                         entry.action(), entry.performedBy(), entry.details(), entry.createdAt()))
@@ -184,7 +232,7 @@ public class PurchaseRequestService {
 
     @Transactional
     public void cancel(long id, String actorUsername) {
-        PurchaseRequest current = findExistingForUpdate(id);
+        PurchaseRequest current = findVisibleForUpdate(id, findActor(actorUsername));
         requireStatus(current, EDITABLE_STATUSES);
         purchaseRequestRepository.updateStatus(id, PurchaseRequestStatus.CANCELLED);
         purchaseRequestHistoryRepository.insert(id, "CANCELLED", actorUsername, "Compra cancelada.");
@@ -193,7 +241,7 @@ public class PurchaseRequestService {
     /** Moves the requisition to the trash: it disappears from regular use but stays restorable by admins. */
     @Transactional
     public void moveToTrash(long id, String actorUsername) {
-        findExistingForUpdate(id);
+        findVisibleForUpdate(id, findActor(actorUsername));
         purchaseRequestRepository.moveToTrash(id, actorUsername);
         purchaseRequestHistoryRepository.insert(id, "DELETED", actorUsername, "Requisição movida para a lixeira.");
     }
@@ -204,7 +252,7 @@ public class PurchaseRequestService {
                 .map(deleted -> new DeletedPurchaseRequestResponse(
                         deleted.id(),
                         deleted.requestNumber(),
-                        deleted.department(),
+                        deleted.departmentName(),
                         deleted.requesterName(),
                         deleted.purchaseReason(),
                         deleted.status(),
@@ -221,15 +269,55 @@ public class PurchaseRequestService {
             throw new PurchaseRequestNotFoundException(id);
         }
         purchaseRequestHistoryRepository.insert(id, "RESTORED", actorUsername, "Requisição restaurada da lixeira.");
-        return getById(id);
+        return toResponse(findExisting(id));
+    }
+
+    private LocalUser findActor(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new AccessDeniedException("Usuário desconhecido."));
     }
 
     private PurchaseRequest findExisting(long id) {
         return purchaseRequestRepository.findById(id).orElseThrow(() -> new PurchaseRequestNotFoundException(id));
     }
 
-    private PurchaseRequest findExistingForUpdate(long id) {
-        return purchaseRequestRepository.findByIdForUpdate(id).orElseThrow(() -> new PurchaseRequestNotFoundException(id));
+    private PurchaseRequest findVisible(long id, LocalUser actor) {
+        return requireVisible(findExisting(id), actor);
+    }
+
+    private PurchaseRequest findVisibleForUpdate(long id, LocalUser actor) {
+        PurchaseRequest purchaseRequest = purchaseRequestRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new PurchaseRequestNotFoundException(id));
+        return requireVisible(purchaseRequest, actor);
+    }
+
+    /** Requisitions of other departments are reported as not found so their existence is not disclosed. */
+    private static PurchaseRequest requireVisible(PurchaseRequest purchaseRequest, LocalUser actor) {
+        if (!actor.seesAllDepartments() && !purchaseRequest.departmentId().equals(actor.departmentId())) {
+            throw new PurchaseRequestNotFoundException(purchaseRequest.id());
+        }
+        return purchaseRequest;
+    }
+
+    /**
+     * Users bound to a department always register requisitions in it. Everyone else must pick one;
+     * keeping the current department of an existing requisition is allowed even if it was deactivated.
+     */
+    private long chooseDepartment(Long requested, Long current, LocalUser actor) {
+        Long target = requested != null ? requested : current;
+        if (!actor.seesAllDepartments()) {
+            if (target != null && !target.equals(actor.departmentId())) {
+                throw new DepartmentException("Você só pode registrar requisições do seu setor.");
+            }
+            target = actor.departmentId();
+        }
+        if (target == null) {
+            throw new DepartmentException("Selecione o setor.");
+        }
+        if (!target.equals(current)) {
+            departmentService.requireActive(target);
+        }
+        return target;
     }
 
     private static void requireStatus(PurchaseRequest purchaseRequest, Set<PurchaseRequestStatus> allowed) {
@@ -273,7 +361,8 @@ public class PurchaseRequestService {
                 null)));
     }
 
-    private PurchaseRequestResponse toResponse(PurchaseRequest purchaseRequest, List<PurchaseRequestItem> items) {
+    private PurchaseRequestResponse toResponse(PurchaseRequest purchaseRequest) {
+        List<PurchaseRequestItem> items = purchaseRequestItemRepository.findByPurchaseRequestId(purchaseRequest.id());
         List<PurchaseRequestItemResponse> itemResponses = items.stream()
                 .map(item -> new PurchaseRequestItemResponse(
                         item.id(),
@@ -288,15 +377,19 @@ public class PurchaseRequestService {
                         item.status(),
                         item.notes()))
                 .toList();
+        // Null when no item has a value yet, so the UI can tell "not informed" apart from zero.
         BigDecimal totalValue = items.stream()
                 .map(PurchaseRequestItem::totalValue)
                 .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal::add)
+                .orElse(null);
 
         return new PurchaseRequestResponse(
                 purchaseRequest.id(),
                 purchaseRequest.requestNumber(),
-                purchaseRequest.department(),
+                purchaseRequest.departmentId(),
+                purchaseRequest.departmentName(),
+                purchaseRequest.usageLocation(),
                 purchaseRequest.requesterName(),
                 purchaseRequest.requestedOn(),
                 purchaseRequest.totvsRequestedOn(),
@@ -305,6 +398,8 @@ public class PurchaseRequestService {
                 purchaseRequest.costCenter(),
                 purchaseRequest.status(),
                 purchaseRequest.notes(),
+                purchaseRequest.approvedAt(),
+                purchaseRequest.approvedBy(),
                 totalValue,
                 itemResponses,
                 purchaseRequest.createdAt(),
@@ -315,7 +410,9 @@ public class PurchaseRequestService {
         return new PurchaseRequestSummaryResponse(
                 summary.id(),
                 summary.requestNumber(),
-                summary.department(),
+                summary.departmentId(),
+                summary.departmentName(),
+                summary.usageLocation(),
                 summary.requesterName(),
                 summary.purchaseReason(),
                 summary.priority(),
@@ -324,7 +421,10 @@ public class PurchaseRequestService {
                 summary.totvsRequestedOn(),
                 summary.itemCount(),
                 summary.pendingItemCount(),
-                summary.totalValue());
+                summary.totalValue(),
+                summary.approvedAt(),
+                summary.approvedBy(),
+                summary.itemDescriptions());
     }
 
     private static String blankToNull(String value) {

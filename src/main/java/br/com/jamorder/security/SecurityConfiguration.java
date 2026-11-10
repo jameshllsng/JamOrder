@@ -31,11 +31,16 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/login.html", "/login.js", "/styles.css", "/api/csrf", "/actuator/health").permitAll()
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/departments").authenticated()
+                        .requestMatchers("/api/departments/**").hasRole("ADMIN")
+                        .requestMatchers("/users.html", "/users.js").hasRole("ADMIN")
+                        // Manager approval is informational; it is also open to admins.
+                        .requestMatchers("/api/purchase-requests/*/approval").hasAnyRole("ADMIN", "MANAGER")
                         .requestMatchers(HttpMethod.POST, "/api/purchase-requests/*/cancel").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/purchase-requests/trash").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/purchase-requests/*/restore").hasRole("ADMIN")
                         .requestMatchers("/trash.html", "/trash.js").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/purchase-requests/*/items/*/receipts").hasAnyRole("ADMIN", "BUYER")
+                        .requestMatchers(HttpMethod.POST, "/api/purchase-requests/*/items/*/receipts").hasAnyRole("ADMIN", "BUYER", "REQUESTER")
                         .requestMatchers(HttpMethod.DELETE, "/api/purchase-requests/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/purchase-requests").hasAnyRole("ADMIN", "REQUESTER")
                         .requestMatchers(HttpMethod.PUT, "/api/purchase-requests/**").hasRole("ADMIN")

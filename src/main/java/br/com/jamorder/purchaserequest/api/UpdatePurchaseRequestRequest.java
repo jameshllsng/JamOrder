@@ -15,9 +15,11 @@ public record UpdatePurchaseRequestRequest(
         @Size(max = 50, message = "O número da requisição deve ter no máximo 50 caracteres.")
         String requestNumber,
 
-        @NotBlank(message = "O setor é obrigatório.")
-        @Size(max = 120, message = "O setor deve ter no máximo 120 caracteres.")
-        String department,
+        // Optional for users bound to a department: their own department is used.
+        Long departmentId,
+
+        @Size(max = 120, message = "O local de uso deve ter no máximo 120 caracteres.")
+        String usageLocation,
 
         @NotNull(message = "A data do pedido é obrigatória.")
         @PastOrPresent(message = "A data do pedido não pode estar no futuro.")
