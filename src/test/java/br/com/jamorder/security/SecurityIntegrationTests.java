@@ -23,6 +23,7 @@ import java.util.UUID;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -189,6 +190,37 @@ class SecurityIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequestBody()))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    @WithMockUser(username = "security-requester", roles = "REQUESTER")
+    void userSavesOwnPalette() throws Exception {
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.palette").doesNotExist());
+        mockMvc.perform(put("/api/auth/me/palette")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"palette\":\"BORDO\"}"))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(jsonPath("$.palette").value("BORDO"));
+    }
+
+    @Test
+    @WithMockUser(username = "security-requester", roles = "REQUESTER")
+    void rejectsUnknownPalette() throws Exception {
+        mockMvc.perform(put("/api/auth/me/palette")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"palette\":\"NEON\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void themeScriptIsPublicForTheLoginPage() throws Exception {
+        mockMvc.perform(get("/theme.js"))
+                .andExpect(status().isOk());
     }
 
     private String validRequestBody() {

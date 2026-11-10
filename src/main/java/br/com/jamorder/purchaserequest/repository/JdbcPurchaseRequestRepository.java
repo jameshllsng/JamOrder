@@ -86,7 +86,8 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                        COUNT(item.id) AS item_count,
                        COUNT(item.id) FILTER (WHERE item.status IN ('PENDING', 'PARTIALLY_RECEIVED')) AS pending_item_count,
                        SUM(item.total_value) AS total_value,
-                       STRING_AGG(item.description, ' ' ORDER BY item.id) AS item_descriptions
+                       STRING_AGG(item.description, ' ' ORDER BY item.id) AS item_descriptions,
+                       STRING_AGG(DISTINCT item.supplier_name, ', ' ORDER BY item.supplier_name) AS supplier_names
                 FROM purchase_requests request
                 JOIN departments department ON department.id = request.department_id
                 LEFT JOIN purchase_request_items item ON item.purchase_request_id = request.id
@@ -113,7 +114,8 @@ public class JdbcPurchaseRequestRepository implements PurchaseRequestRepository 
                 resultSet.getBigDecimal("total_value"),
                 toInstant(resultSet.getTimestamp("approved_at")),
                 resultSet.getString("approved_by"),
-                resultSet.getString("item_descriptions")), departmentId, departmentId);
+                resultSet.getString("item_descriptions"),
+                resultSet.getString("supplier_names")), departmentId, departmentId);
     }
 
     @Override

@@ -21,5 +21,6 @@ public record PurchaseRequestSummary(
         BigDecimal totalValue,
         Instant approvedAt,
         String approvedBy,
-        String itemDescriptions) {
+        String itemDescriptions,
+        String supplierNames) {
 }

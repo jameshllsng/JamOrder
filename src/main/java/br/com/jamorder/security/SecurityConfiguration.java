@@ -29,7 +29,7 @@ public class SecurityConfiguration {
         http
                 .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/login.html", "/login.js", "/styles.css", "/api/csrf", "/actuator/health").permitAll()
+                        .requestMatchers("/login.html", "/login.js", "/theme.js", "/theme-boot.js", "/styles.css", "/api/csrf", "/actuator/health").permitAll()
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/departments").authenticated()
                         .requestMatchers("/api/departments/**").hasRole("ADMIN")

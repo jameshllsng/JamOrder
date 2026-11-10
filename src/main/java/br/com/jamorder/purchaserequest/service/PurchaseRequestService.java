@@ -424,7 +424,8 @@ public class PurchaseRequestService {
                 summary.totalValue(),
                 summary.approvedAt(),
                 summary.approvedBy(),
-                summary.itemDescriptions());
+                summary.itemDescriptions(),
+                summary.supplierNames());
     }
 
     private static String blankToNull(String value) {

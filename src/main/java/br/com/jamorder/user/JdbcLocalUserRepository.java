@@ -36,6 +36,18 @@ public class JdbcLocalUserRepository {
 
     public void updatePassword(long id, String passwordHash) { jdbcTemplate.update("UPDATE app_users SET password_hash = ? WHERE id = ?", passwordHash, id); }
 
+    public Optional<UserPalette> findPalette(String username) {
+        return jdbcTemplate.query("SELECT palette FROM app_users WHERE username = ?",
+                        (rs, row) -> rs.getString("palette"), username).stream()
+                .filter(palette -> palette != null)
+                .map(UserPalette::valueOf)
+                .findFirst();
+    }
+
+    public void updatePalette(String username, UserPalette palette) {
+        jdbcTemplate.update("UPDATE app_users SET palette = ? WHERE username = ?", palette.name(), username);
+    }
+
     public long countActiveAdmins() { return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM app_users WHERE role = 'ADMIN' AND active = TRUE", Long.class); }
 
     public void insert(LocalUser user) {

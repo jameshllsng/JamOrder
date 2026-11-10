@@ -18,7 +18,6 @@ document.querySelector("#close-password-dialog").addEventListener("click", () =>
 document.querySelector("#reset-password-form").addEventListener("submit", submitPasswordReset);
 
 async function start() {
-    applyStoredTheme();
     const response = await fetch("/api/csrf");
     csrfToken = await response.json();
     await loadAll();
@@ -194,6 +193,5 @@ async function errorMessage(response) { const body = await response.json().catch
 function show(message, variant) { feedback.className = `operation-feedback operation-feedback-${variant}`; feedback.textContent = message; feedback.hidden = false; window.setTimeout(() => feedback.hidden = true, 3200); }
 function showCreateUserMessage(message, variant) { createUserMessage.textContent = message; createUserMessage.className = `form-message full-width${variant === "success" ? " form-message-success" : ""}`; createUserMessage.hidden = false; }
 function hideCreateUserMessage() { createUserMessage.hidden = true; }
-function applyStoredTheme() { try { document.body.classList.toggle("theme-light", localStorage.getItem("jamorder-theme") === "light"); } catch { /* theme is optional */ } }
 
 start().catch(() => window.location.assign("/login.html"));

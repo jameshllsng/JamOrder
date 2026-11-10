@@ -14,7 +14,7 @@ const sortValues = {
     number: request => request.requestNumber ?? "",
     department: request => request.departmentName ?? "",
     requester: request => request.requesterName ?? "",
-    reason: request => request.purchaseReason ?? "",
+    supplier: request => request.supplierNames ?? "",
     priority: request => priorityRank[request.priority],
     status: request => statusRank[request.status],
     totvsDate: request => request.totvsRequestedOn ?? "",
@@ -38,7 +38,6 @@ const confirmationAction = document.querySelector("#confirmation-action");
 const requestDetailsDialog = document.querySelector("#request-details-dialog");
 const requestDetailsItems = document.querySelector("#request-details-items");
 const requestHistory = document.querySelector("#request-history");
-const themeToggle = document.querySelector("#theme-toggle");
 const statusFilter = document.querySelector("#status-filter");
 const departmentFilter = document.querySelector("#department-filter");
 const searchInput = document.querySelector("#request-search");
@@ -62,7 +61,6 @@ document.querySelector("#cancel-create").addEventListener("click", closeCreateDi
 document.querySelector("#add-item").addEventListener("click", () => addItemForm(true));
 document.querySelector("#refresh-list").addEventListener("click", loadPurchaseRequests);
 document.querySelector("#logout").addEventListener("click", logout);
-themeToggle.addEventListener("click", toggleTheme);
 document.querySelector("#confirmation-cancel").addEventListener("click", () => resolveConfirmation(false));
 document.querySelector("#close-request-details").addEventListener("click", () => requestDetailsDialog.close());
 confirmationAction.addEventListener("click", () => resolveConfirmation(true));
@@ -147,7 +145,7 @@ function createRequestRow(request) {
     if (request.requestNumber) appendCell(row, request.requestNumber); else appendCell(row, "Rascunho", "draft-number");
     appendCell(row, request.departmentName);
     appendCell(row, request.requesterName);
-    appendCell(row, request.purchaseReason);
+    if (request.supplierNames) appendCell(row, request.supplierNames); else { appendCell(row, "—", "value-missing"); row.lastElementChild.title = "Fornecedor não informado"; }
     appendBadgeCell(row, priorityLabels[request.priority], `priority-${request.priority.toLowerCase()}`);
     appendBadgeCell(row, statusLabels[request.status], `status-${request.status.toLowerCase().replaceAll("_", "-")}`);
     if (request.approvedAt) appendApprovalMark(row.lastElementChild, request);
@@ -232,7 +230,7 @@ async function changeApproval(id, method, message) { await performRequest(`${api
 
 function normalizeText(value) { return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase(); }
 function searchableText(request) {
-    return normalizeText([request.requestNumber, request.purchaseReason, request.requesterName, request.departmentName, request.usageLocation, request.itemDescriptions].filter(Boolean).join(" "));
+    return normalizeText([request.requestNumber, request.purchaseReason, request.requesterName, request.departmentName, request.usageLocation, request.itemDescriptions, request.supplierNames].filter(Boolean).join(" "));
 }
 
 function setUpSortableHeaders() {
@@ -345,7 +343,4 @@ function setTodayAsRequestedDate() { createForm.elements.requestedOn.value = tod
 function setRequesterName() { if (currentUserDisplayName) createForm.elements.requesterName.value = currentUserDisplayName; }
 
 async function start() { setTodayAsRequestedDate(); addItemForm(); await loadCsrfToken(); if (await loadAuthenticatedUser()) { await loadDepartments(); await loadPurchaseRequests(); } }
-function toggleTheme() { applyTheme(document.body.classList.contains("theme-light") ? "dark" : "light"); }
-function applyTheme(theme) { const isLight = theme === "light"; document.body.classList.toggle("theme-light", isLight); themeToggle.textContent = isLight ? "◐" : "☀"; themeToggle.setAttribute("aria-label", isLight ? "Ativar modo escuro" : "Ativar modo claro"); themeToggle.title = themeToggle.getAttribute("aria-label"); localStorage.setItem("jamorder-theme", theme); }
-applyTheme(localStorage.getItem("jamorder-theme") ?? "dark");
 start().catch(error => { document.querySelector("#request-count").textContent = error.message; });

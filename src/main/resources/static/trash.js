@@ -8,7 +8,6 @@ document.querySelector("#refresh-trash").addEventListener("click", loadTrash);
 document.querySelector("#logout").addEventListener("click", logout);
 
 async function start() {
-    applyStoredTheme();
     const response = await fetch("/api/csrf");
     if (!response.ok) throw new Error("Não foi possível iniciar a sessão.");
     csrfToken = await response.json();
@@ -63,6 +62,5 @@ function formatCurrency(value) { if (value === null || value === undefined) retu
 async function errorMessage(response) { const body = await response.json().catch(() => null); return body?.detail ?? "Não foi possível concluir a operação."; }
 function show(message, variant) { clearTimeout(feedbackTimeout); feedback.className = `operation-feedback operation-feedback-${variant}`; feedback.textContent = message; feedback.hidden = false; feedbackTimeout = window.setTimeout(() => feedback.hidden = true, 3200); }
 async function logout() { await fetch("/logout", { method: "POST", headers: { [csrfToken.headerName]: csrfToken.token } }); window.location.assign("/login.html"); }
-function applyStoredTheme() { try { document.body.classList.toggle("theme-light", localStorage.getItem("jamorder-theme") === "light"); } catch { /* theme is optional */ } }
 
 start().catch(() => window.location.assign("/login.html"));

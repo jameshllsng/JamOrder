@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JamOrder</title>
+    <script src="/theme-boot.js"></script>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -31,7 +32,7 @@
             <p>Acompanhe as requisições lançadas no TOTVS até a entrega.</p>
         </div>
         <div class="account-actions">
-            <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Ativar modo claro" title="Ativar modo claro">☀</button>
+            <div id="palette-picker"></div>
             <div class="current-user" id="current-user"><strong id="current-user-name"></strong><span id="current-user-department"></span></div>
             <button class="button button-quiet" id="logout" type="button">Sair</button>
             <button class="button button-primary" id="open-create-form" type="button">Nova requisição</button>
@@ -49,7 +50,7 @@
                 <p id="request-count">Carregando dados...</p>
             </div>
             <div class="heading-actions">
-                <input class="search-input" id="request-search" type="search" placeholder="Buscar nº, motivo, item, solicitante..." aria-label="Buscar requisições">
+                <input class="search-input" id="request-search" type="search" placeholder="Buscar nº, fornecedor, item, motivo..." aria-label="Buscar requisições">
                 <select id="department-filter" aria-label="Filtrar por setor" hidden></select>
                 <select id="status-filter" aria-label="Filtrar requisições">
                     <option value="ALL">Todas</option>
@@ -69,7 +70,7 @@
                     <th data-sort="number">Nº TOTVS</th>
                     <th data-sort="department">Setor</th>
                     <th data-sort="requester">Solicitante</th>
-                    <th data-sort="reason">Motivo</th>
+                    <th data-sort="supplier">Fornecedor</th>
                     <th data-sort="priority">Prioridade</th>
                     <th data-sort="status">Status</th>
                     <th data-sort="totvsDate">Lançada no TOTVS</th>
@@ -175,6 +176,7 @@
     </fieldset>
 </template>
 
+<script src="/theme.js" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>
