@@ -192,6 +192,57 @@ class PurchaseRequestServiceIntegrationTests {
     }
 
     @Test
+    void cancellingOpenRequisitionCancelsItsPendingItems() {
+        PurchaseRequestResponse open = purchaseRequestService.create(createRequest(uniqueNumber(), List.of(
+                item("Keyboard", 2, null),
+                item("Monitor", 1, null))), ACTOR);
+
+        purchaseRequestService.cancel(open.id(), ACTOR);
+
+        PurchaseRequestResponse cancelled = purchaseRequestService.getById(open.id(), ACTOR);
+        assertThat(cancelled.status()).isEqualTo(PurchaseRequestStatus.CANCELLED);
+        assertThat(cancelled.items()).allSatisfy(item -> assertThat(item.status())
+                .isEqualTo(PurchaseRequestItemStatus.CANCELLED));
+    }
+
+    @Test
+    void partiallyReceivedRequisitionCannotBeCancelled() {
+        PurchaseRequestResponse open = purchaseRequestService.create(createRequest(uniqueNumber(), List.of(
+                item("Patch cord", 4, null))), ACTOR);
+        long itemId = open.items().getFirst().id();
+        purchaseRequestService.registerReceipt(open.id(), itemId, new RegisterItemReceiptRequest(1, LocalDate.now()), ACTOR);
+
+        assertThatThrownBy(() -> purchaseRequestService.cancel(open.id(), ACTOR))
+                .isInstanceOf(PurchaseRequestNotOpenException.class);
+
+        PurchaseRequestResponse unchanged = purchaseRequestService.getById(open.id(), ACTOR);
+        assertThat(unchanged.status()).isEqualTo(PurchaseRequestStatus.PARTIALLY_RECEIVED);
+        assertThat(unchanged.items().getFirst().status()).isEqualTo(PurchaseRequestItemStatus.PARTIALLY_RECEIVED);
+    }
+
+    @Test
+    void completedRequisitionCannotBeCancelled() {
+        PurchaseRequestResponse open = purchaseRequestService.create(createRequest(uniqueNumber(), List.of(
+                item("Mouse", 1, null))), ACTOR);
+        purchaseRequestService.registerReceipt(open.id(), open.items().getFirst().id(), new RegisterItemReceiptRequest(1, LocalDate.now()), ACTOR);
+
+        assertThatThrownBy(() -> purchaseRequestService.cancel(open.id(), ACTOR))
+                .isInstanceOf(PurchaseRequestNotOpenException.class);
+
+        assertThat(purchaseRequestService.getById(open.id(), ACTOR).status()).isEqualTo(PurchaseRequestStatus.COMPLETED);
+    }
+
+    @Test
+    void cancelledRequisitionCannotBeCancelledAgain() {
+        PurchaseRequestResponse draft = purchaseRequestService.create(createRequest(null, List.of(
+                item("Headset", 1, null))), ACTOR);
+        purchaseRequestService.cancel(draft.id(), ACTOR);
+
+        assertThatThrownBy(() -> purchaseRequestService.cancel(draft.id(), ACTOR))
+                .isInstanceOf(PurchaseRequestNotOpenException.class);
+    }
+
+    @Test
     void trashHidesRequisitionUntilRestored() {
         PurchaseRequestResponse open = purchaseRequestService.create(createRequest(uniqueNumber(), List.of(
                 item("Cable", 1, null))), ACTOR);

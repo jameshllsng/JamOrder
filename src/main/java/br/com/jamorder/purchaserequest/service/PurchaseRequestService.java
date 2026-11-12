@@ -235,6 +235,7 @@ public class PurchaseRequestService {
         PurchaseRequest current = findVisibleForUpdate(id, findActor(actorUsername));
         requireStatus(current, EDITABLE_STATUSES);
         purchaseRequestRepository.updateStatus(id, PurchaseRequestStatus.CANCELLED);
+        purchaseRequestItemRepository.cancelPendingItems(id);
         purchaseRequestHistoryRepository.insert(id, "CANCELLED", actorUsername, "Compra cancelada.");
     }
 

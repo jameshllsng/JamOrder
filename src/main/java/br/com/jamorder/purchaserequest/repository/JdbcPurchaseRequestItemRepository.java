@@ -97,6 +97,13 @@ public class JdbcPurchaseRequestItemRepository implements PurchaseRequestItemRep
     }
 
     @Override
+    public int cancelPendingItems(long purchaseRequestId) {
+        return jdbcTemplate.update(
+                "UPDATE purchase_request_items SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE purchase_request_id = ? AND status = 'PENDING'",
+                purchaseRequestId);
+    }
+
+    @Override
     public void deleteByPurchaseRequestId(long purchaseRequestId) {
         jdbcTemplate.update("DELETE FROM purchase_request_items WHERE purchase_request_id = ?", purchaseRequestId);
     }

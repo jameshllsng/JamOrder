@@ -17,5 +17,8 @@ public interface PurchaseRequestItemRepository {
 
     PurchaseRequestItem registerReceipt(long id, int totalReceivedQuantity, int receiptQuantity, LocalDate receivedOn, String checkedBy, PurchaseRequestItemStatus status);
 
+    /** Marks the still pending items of a cancelled requisition as cancelled; returns how many changed. */
+    int cancelPendingItems(long purchaseRequestId);
+
     void deleteByPurchaseRequestId(long purchaseRequestId);
 }

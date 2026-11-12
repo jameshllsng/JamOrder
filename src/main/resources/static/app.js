@@ -317,7 +317,7 @@ function createDetailItem(requestId, item, canReceive) {
     const container = document.createElement("article"); container.className = "detail-item";
     const header = document.createElement("div"); header.className = "detail-item-header";
     const title = document.createElement("h4"); title.textContent = [item.description, item.brandModel].filter(Boolean).join(" · ");
-    const badge = document.createElement("span"); badge.className = `badge status-${item.status.toLowerCase().replaceAll("_", "-")}`; badge.textContent = item.status === "PARTIALLY_RECEIVED" ? "Recebido parcialmente" : item.status === "RECEIVED" ? "Recebido" : "Pendente";
+    const badge = document.createElement("span"); badge.className = `badge status-${item.status.toLowerCase().replaceAll("_", "-")}`; badge.textContent = item.status === "PARTIALLY_RECEIVED" ? "Recebido parcialmente" : item.status === "RECEIVED" ? "Recebido" : item.status === "CANCELLED" ? "Cancelado" : "Pendente";
     header.append(title, badge);
     const summary = document.createElement("p");
     summary.textContent = [`Recebido: ${item.receivedQuantity} de ${item.quantity}`, item.supplierName ? `Fornecedor: ${item.supplierName}` : null, `Valor: ${formatCurrency(item.totalValue)}`, item.receivedOn ? `Último recebimento: ${formatDate(item.receivedOn)}` : null, item.checkedBy ? `Conferido por: ${item.checkedBy}` : null].filter(Boolean).join(" · ");
