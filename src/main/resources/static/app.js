@@ -60,6 +60,7 @@ document.querySelector("#close-create-form").addEventListener("click", closeCrea
 document.querySelector("#cancel-create").addEventListener("click", closeCreateDialog);
 document.querySelector("#add-item").addEventListener("click", () => addItemForm(true));
 document.querySelector("#refresh-list").addEventListener("click", loadPurchaseRequests);
+document.querySelector("#draft-alert-action").addEventListener("click", () => { statusFilter.value = "DRAFT"; renderPurchaseRequests(); document.querySelector("#requests-title").scrollIntoView({ behavior: "smooth", block: "start" }); });
 document.querySelector("#logout").addEventListener("click", logout);
 document.querySelector("#confirmation-cancel").addEventListener("click", () => resolveConfirmation(false));
 document.querySelector("#close-request-details").addEventListener("click", () => requestDetailsDialog.close());
@@ -104,6 +105,7 @@ async function loadPurchaseRequests() { try { const response = await fetch(apiUr
 function renderPurchaseRequests() {
     const inDepartment = loadedPurchaseRequests.filter(request => !departmentFilter.value || String(request.departmentId) === departmentFilter.value);
     renderSummaryCards(inDepartment);
+    renderDraftAlert(inDepartment);
     const search = normalizeText(searchInput.value.trim());
     const visible = inDepartment
         .filter(request => statusFilters[statusFilter.value](request.status))
@@ -129,6 +131,31 @@ function renderSummaryCards(purchaseRequests) {
     }));
 }
 
+/**
+ * Banner and sidebar counter for drafts still waiting to be launched in TOTVS.
+ * Requesters only see their own drafts; everyone else sees all drafts in scope.
+ */
+function renderDraftAlert(purchaseRequests) {
+    const drafts = purchaseRequests.filter(request => request.status === "DRAFT"
+        && (currentUserRole !== "REQUESTER" || request.requesterName === currentUserDisplayName));
+    const summary = window.JamDraftNav.summarize(drafts);
+    window.JamDraftNav.render(summary);
+
+    const alert = document.querySelector("#draft-alert");
+    alert.hidden = summary.count === 0;
+    if (summary.count === 0) return;
+    alert.classList.toggle("draft-alert-danger", summary.overdue);
+    const plural = summary.count === 1 ? "rascunho" : "rascunhos";
+    document.querySelector("#draft-alert-title").textContent = currentUserRole === "REQUESTER"
+        ? `Você tem ${summary.count} ${plural} aguardando lançamento no TOTVS`
+        : `${summary.count} ${plural} aguardando lançamento no TOTVS`;
+    const waiting = summary.oldestDays === 0 ? "hoje" : `há ${formatDays(summary.oldestDays)}`;
+    document.querySelector("#draft-alert-detail").textContent = summary.count === 1
+        ? `Criado ${waiting}.`
+        : `O mais antigo foi criado ${waiting}.`;
+    document.querySelector("#draft-alert-action").hidden = statusFilter.value === "DRAFT";
+}
+
 function renderPurchaseRequestTable(purchaseRequests, totalCount) {
     const tableBody = document.querySelector("#request-table-body");
     document.querySelector("#request-count").textContent = `${purchaseRequests.length} de ${totalCount} requisição(ões)`;
@@ -139,7 +166,7 @@ function renderPurchaseRequestTable(purchaseRequests, totalCount) {
 
 function createRequestRow(request) {
     const row = document.createElement("tr");
-    row.className = "clickable-row";
+    row.className = request.status === "DRAFT" ? "clickable-row draft-row" : "clickable-row";
     // The whole row opens the details; buttons inside it keep their own action.
     row.addEventListener("click", event => { if (!event.target.closest("button")) showRequestDetails(request.id); });
     if (request.requestNumber) appendCell(row, request.requestNumber); else appendCell(row, "Rascunho", "draft-number");
@@ -252,9 +279,9 @@ function toggleSort(key) {
     renderPurchaseRequests();
 }
 
-/** Without a chosen column, keeps the server order (newest first). */
+/** Without a chosen column, drafts come first and the rest keeps the server order (newest first). */
 function sortRequests(requests) {
-    if (!sortState.key) return requests;
+    if (!sortState.key) return [...requests.filter(request => request.status === "DRAFT"), ...requests.filter(request => request.status !== "DRAFT")];
     const valueOf = sortValues[sortState.key];
     const direction = sortState.direction === "ascending" ? 1 : -1;
     return [...requests].sort((first, second) => {

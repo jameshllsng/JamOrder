@@ -519,3 +519,32 @@ html[data-palette="BORDO"] .priority-urgent { background: #c9502b; }
 
 /* Keep the approval mark on the same line as the status badge. */
 td:has(> .approval-mark) { white-space: nowrap; }
+
+/* ---- Drafts waiting to be launched in TOTVS ---- */
+.draft-alert { align-items: center; background: #fff6df; border: 1px solid #e5ca87; border-radius: 5px; color: #6b4a10; display: flex; gap: 12px; margin-top: 18px; padding: 10px 14px; }
+.draft-alert-icon { align-items: center; background: #c99a3a; border-radius: 50%; color: #fff; display: inline-flex; flex: none; font-size: 0.8rem; font-weight: 800; height: 22px; justify-content: center; width: 22px; }
+.draft-alert-text { display: grid; flex: 1; gap: 1px; min-width: 0; }
+.draft-alert-text strong { font-size: 0.9rem; }
+.draft-alert-text span { font-size: 0.8rem; opacity: 0.85; }
+.draft-alert-action { background: #805b17; color: #fff; flex: none; }
+.draft-alert-action:hover { filter: brightness(1.1); }
+.draft-alert-danger { background: #fff0ef; border-color: #e8b8b4; color: #7d2621; }
+.draft-alert-danger .draft-alert-icon, .draft-alert-danger .draft-alert-action { background: #9b3029; }
+html:not(.theme-light) .draft-alert { background: rgba(214, 166, 67, 0.12); border-color: rgba(214, 166, 67, 0.45); color: #ecc97e; }
+html:not(.theme-light) .draft-alert-icon { background: #b8862c; }
+html:not(.theme-light) .draft-alert-action { background: #8f671c; }
+html:not(.theme-light) .draft-alert-danger { background: rgba(229, 96, 87, 0.13); border-color: rgba(229, 96, 87, 0.5); color: #f5a49d; }
+html:not(.theme-light) .draft-alert-danger .draft-alert-icon, html:not(.theme-light) .draft-alert-danger .draft-alert-action { background: #b23a33; }
+
+.navigation-item .nav-count { background: #c99a3a; border-radius: 999px; color: #fff; font-size: 0.7rem; font-variant-numeric: tabular-nums; font-weight: 750; line-height: 1; margin-left: auto; min-width: 20px; padding: 4px 6px; text-align: center; }
+.navigation-item .nav-count-danger { background: #b23a33; }
+
+/* Draft rows: faint amber tint plus a marker on the first cell. */
+.draft-row td { background: rgba(214, 166, 67, 0.07); }
+.draft-row td:first-child { box-shadow: inset 3px 0 0 #c99a3a; }
+
+@media (max-width: 640px) {
+    .draft-alert { align-items: flex-start; flex-wrap: wrap; }
+    .draft-alert-action { margin-left: 34px; }
+}
+.draft-row:hover td { background: rgba(214, 166, 67, 0.14); }

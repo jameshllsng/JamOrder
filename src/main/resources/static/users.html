@@ -15,7 +15,7 @@
             <div><strong>JamOrder</strong><span>Operações internas</span></div>
         </div>
         <nav class="sidebar-navigation" aria-label="Seções do sistema">
-            <a class="navigation-item" href="/"><span aria-hidden="true">■</span> Requisições</a>
+            <a class="navigation-item" href="/"><span aria-hidden="true">■</span> Requisições<span class="nav-count" id="draft-nav-count" hidden></span></a>
             <a class="navigation-item navigation-item-active" href="/users.html" aria-current="page"><span aria-hidden="true">■</span> Usuários</a>
             <a class="navigation-item" href="/trash.html"><span aria-hidden="true">■</span> Lixeira</a>
         </nav>
@@ -56,6 +56,7 @@
 <div class="operation-feedback" id="operation-feedback" role="status" aria-live="polite" hidden></div>
 <dialog class="confirmation-dialog" id="password-dialog"><form class="confirmation-content" id="reset-password-form"><h2>Redefinir senha</h2><p id="password-dialog-message"></p><label>Nova senha<input id="new-password" type="password" minlength="12" maxlength="100" required></label><div class="confirmation-actions"><button class="button button-quiet" id="close-password-dialog" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar senha</button></div></form></dialog>
 <script src="/theme.js" defer></script>
+<script src="/draft-nav.js" defer></script>
 <script src="/users.js" defer></script>
 </body>
 </html>

@@ -18,7 +18,7 @@
             </div>
         </div>
         <nav class="sidebar-navigation" aria-label="Seções do sistema">
-            <a class="navigation-item navigation-item-active" href="/" aria-current="page"><span aria-hidden="true">■</span> Requisições</a>
+            <a class="navigation-item navigation-item-active" href="/" aria-current="page"><span aria-hidden="true">■</span> Requisições<span class="nav-count" id="draft-nav-count" hidden></span></a>
             <a class="navigation-item" id="users-navigation" href="/users.html" hidden><span aria-hidden="true">■</span> Usuários</a>
             <a class="navigation-item" id="trash-navigation" href="/trash.html" hidden><span aria-hidden="true">■</span> Lixeira</a>
         </nav>
@@ -42,6 +42,15 @@
     <section class="indicator-strip" aria-label="Resumo das requisições">
         <div class="summary-grid" id="summary-cards"></div>
     </section>
+
+    <div class="draft-alert" id="draft-alert" role="status" hidden>
+        <span class="draft-alert-icon" aria-hidden="true">!</span>
+        <div class="draft-alert-text">
+            <strong id="draft-alert-title"></strong>
+            <span id="draft-alert-detail"></span>
+        </div>
+        <button class="button draft-alert-action" id="draft-alert-action" type="button">Ver rascunhos</button>
+    </div>
 
     <section class="requests-section" aria-labelledby="requests-title">
         <div class="section-heading">
@@ -177,6 +186,7 @@
 </template>
 
 <script src="/theme.js" defer></script>
+<script src="/draft-nav.js" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>
