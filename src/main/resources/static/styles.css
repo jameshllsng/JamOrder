@@ -374,6 +374,7 @@ html:not(.theme-light) input[type="date"]::-webkit-calendar-picker-indicator { c
 .detail-item p { color: var(--muted); font-size: 0.82rem; margin: 6px 0 0; }
 .receipt-form { align-items: end; display: grid; gap: 10px; grid-template-columns: 120px minmax(0, 1fr) auto; margin-top: 14px; }
 .receipt-form label { font-size: 0.76rem; }
+.details-reason { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
 .history-list { list-style: none; margin: 0; padding: 0; }
 .history-list li { border-left: 2px solid var(--timeline); margin: 0 0 12px 5px; padding: 0 0 0 12px; }
 .history-list strong, .history-list span { display: block; font-size: 0.83rem; }
