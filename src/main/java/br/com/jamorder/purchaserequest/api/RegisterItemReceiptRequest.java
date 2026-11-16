@@ -7,6 +7,11 @@ import jakarta.validation.constraints.PastOrPresent;
 import java.time.LocalDate;
 
 public record RegisterItemReceiptRequest(
-        @NotNull @Min(1) Integer receivedQuantity,
-        @NotNull @PastOrPresent LocalDate receivedOn) {
+        @NotNull(message = "A quantidade recebida é obrigatória.")
+        @Min(value = 1, message = "A quantidade recebida deve ser maior que zero.")
+        Integer receivedQuantity,
+
+        @NotNull(message = "A data do recebimento é obrigatória.")
+        @PastOrPresent(message = "A data do recebimento não pode estar no futuro.")
+        LocalDate receivedOn) {
 }

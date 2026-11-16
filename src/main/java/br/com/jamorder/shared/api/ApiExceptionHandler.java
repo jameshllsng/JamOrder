@@ -1,8 +1,13 @@
 package br.com.jamorder.shared.api;
 
+import br.com.jamorder.department.DepartmentException;
 import br.com.jamorder.purchaserequest.service.DuplicatePurchaseRequestNumberException;
+import br.com.jamorder.purchaserequest.service.InvalidTotvsRegistrationException;
+import br.com.jamorder.purchaserequest.service.PurchaseRequestItemNotFoundException;
 import br.com.jamorder.purchaserequest.service.PurchaseRequestNotFoundException;
 import br.com.jamorder.purchaserequest.service.PurchaseRequestNotOpenException;
+import br.com.jamorder.purchaserequest.service.ReceiptQuantityExceededException;
+import br.com.jamorder.user.UserManagementException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -19,22 +24,42 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(PurchaseRequestNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleNotFound(PurchaseRequestNotFoundException exception) {
-        return problem(HttpStatus.NOT_FOUND, "RequisiÃ§Ã£o nÃ£o encontrada.");
+        return problem(HttpStatus.NOT_FOUND, "Requisição não encontrada.");
+    }
+
+    @ExceptionHandler(PurchaseRequestItemNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleItemNotFound(PurchaseRequestItemNotFoundException exception) {
+        return problem(HttpStatus.NOT_FOUND, "Item não encontrado nesta requisição.");
     }
 
     @ExceptionHandler(DuplicatePurchaseRequestNumberException.class)
     public ResponseEntity<ProblemDetail> handleDuplicateRequestNumber(DuplicatePurchaseRequestNumberException exception) {
-        return problem(HttpStatus.CONFLICT, "JÃ¡ existe uma requisiÃ§Ã£o com este nÃºmero.");
+        return problem(HttpStatus.CONFLICT, "Já existe uma requisição com este número.");
     }
 
     @ExceptionHandler(PurchaseRequestNotOpenException.class)
     public ResponseEntity<ProblemDetail> handleInvalidStatus(PurchaseRequestNotOpenException exception) {
-        return problem(HttpStatus.CONFLICT, "A requisiÃ§Ã£o nÃ£o estÃ¡ disponÃ­vel para esta operaÃ§Ã£o.");
+        return problem(HttpStatus.CONFLICT, "A requisição não está disponível para esta operação.");
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ProblemDetail> handleInvalidArgument(IllegalArgumentException exception) {
+    @ExceptionHandler(ReceiptQuantityExceededException.class)
+    public ResponseEntity<ProblemDetail> handleReceiptQuantityExceeded(ReceiptQuantityExceededException exception) {
         return problem(HttpStatus.CONFLICT, "A quantidade recebida excede a quantidade pendente.");
+    }
+
+    @ExceptionHandler(InvalidTotvsRegistrationException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidTotvsRegistration(InvalidTotvsRegistrationException exception) {
+        return problem(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(DepartmentException.class)
+    public ResponseEntity<ProblemDetail> handleDepartment(DepartmentException exception) {
+        return problem(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(UserManagementException.class)
+    public ResponseEntity<ProblemDetail> handleUserManagement(UserManagementException exception) {
+        return problem(HttpStatus.CONFLICT, exception.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -45,8 +70,8 @@ public class ApiExceptionHandler {
             errors.put(field, error.getDefaultMessage());
         });
 
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Existem campos invÃ¡lidos na requisiÃ§Ã£o.");
-        problemDetail.setTitle("Dados invÃ¡lidos");
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Existem campos inválidos na requisição.");
+        problemDetail.setTitle("Dados inválidos");
         problemDetail.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(problemDetail);
     }

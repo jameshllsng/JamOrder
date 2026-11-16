@@ -1,10 +1,8 @@
 package br.com.jamorder.purchaserequest.domain;
 
 public enum PurchaseRequestStatus {
+    DRAFT,
     OPEN,
-    PENDING_APPROVAL,
-    APPROVED,
-    IN_PURCHASE,
     PARTIALLY_RECEIVED,
     COMPLETED,
     CANCELLED

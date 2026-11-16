@@ -19,6 +19,6 @@ public class InitialAdminInitializer implements ApplicationRunner {
     @Override public void run(ApplicationArguments args) {
         if (userRepository.hasAnyUser()) return;
         if (!properties.isComplete()) throw new IllegalStateException("Configure APP_INITIAL_ADMIN_USERNAME, APP_INITIAL_ADMIN_PASSWORD and APP_INITIAL_ADMIN_DISPLAY_NAME before the first startup.");
-        userRepository.insert(new LocalUser(null, properties.username(), passwordEncoder.encode(properties.password()), properties.displayName(), UserRole.ADMIN, true));
+        userRepository.insert(new LocalUser(null, properties.username(), passwordEncoder.encode(properties.password()), properties.displayName(), UserRole.ADMIN, true, null));
     }
 }

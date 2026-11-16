@@ -33,13 +33,13 @@ public class PurchaseRequestController {
     }
 
     @GetMapping
-    public List<PurchaseRequestSummaryResponse> findAll() {
-        return purchaseRequestService.findAll();
+    public List<PurchaseRequestSummaryResponse> findAll(Authentication authentication) {
+        return purchaseRequestService.findAll(authentication.getName());
     }
 
     @GetMapping("/{id}")
-    public PurchaseRequestResponse getById(@PathVariable long id) {
-        return purchaseRequestService.getById(id);
+    public PurchaseRequestResponse getById(@PathVariable long id, Authentication authentication) {
+        return purchaseRequestService.getById(id, authentication.getName());
     }
 
     @PutMapping("/{id}")
@@ -59,9 +59,33 @@ public class PurchaseRequestController {
     }
 
     @GetMapping("/{id}/history")
-    public List<PurchaseRequestHistoryResponse> findHistory(@PathVariable long id) { return purchaseRequestService.findHistory(id); }
+    public List<PurchaseRequestHistoryResponse> findHistory(@PathVariable long id, Authentication authentication) { return purchaseRequestService.findHistory(id, authentication.getName()); }
 
+    /** Informational manager approval (managers and admins); it never changes the status. */
+    @PostMapping("/{id}/approval")
+    public PurchaseRequestResponse approve(@PathVariable long id, Authentication authentication) {
+        return purchaseRequestService.approve(id, authentication.getName());
+    }
+
+    @DeleteMapping("/{id}/approval")
+    public PurchaseRequestResponse revokeApproval(@PathVariable long id, Authentication authentication) {
+        return purchaseRequestService.revokeApproval(id, authentication.getName());
+    }
+
+    /** Moves the requisition to the trash (admins only); it can be restored later. */
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePermanently(@PathVariable long id) { purchaseRequestService.deletePermanently(id); }
+    public void moveToTrash(@PathVariable long id, Authentication authentication) {
+        purchaseRequestService.moveToTrash(id, authentication.getName());
+    }
+
+    @GetMapping("/trash")
+    public List<DeletedPurchaseRequestResponse> findInTrash() {
+        return purchaseRequestService.findInTrash();
+    }
+
+    @PostMapping("/{id}/restore")
+    public PurchaseRequestResponse restoreFromTrash(@PathVariable long id, Authentication authentication) {
+        return purchaseRequestService.restoreFromTrash(id, authentication.getName());
+    }
 }

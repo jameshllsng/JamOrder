@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários e setores · JamOrder</title>
+    <script src="/theme-boot.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="application-layout">
+    <aside class="application-sidebar" aria-label="Navegação principal">
+        <div class="sidebar-brand">
+            <span class="sidebar-mark" aria-hidden="true">J</span>
+            <div><strong>JamOrder</strong><span>Operações internas</span></div>
+        </div>
+        <nav class="sidebar-navigation" aria-label="Seções do sistema">
+            <a class="navigation-item" href="/"><span aria-hidden="true">■</span> Requisições<span class="nav-count" id="draft-nav-count" hidden></span></a>
+            <a class="navigation-item navigation-item-active" href="/users.html" aria-current="page"><span aria-hidden="true">■</span> Usuários</a>
+            <a class="navigation-item" href="/trash.html"><span aria-hidden="true">■</span> Lixeira</a>
+        </nav>
+        <p class="sidebar-footnote">Acompanhamento de compras</p>
+    </aside>
+    <main class="page-shell">
+        <header class="application-header">
+            <div class="application-context"><p class="eyebrow">Administração</p><h1>Usuários e setores</h1><p>Controle os acessos locais e a que setor cada pessoa pertence.</p></div>
+            <div class="account-actions"><div id="palette-picker"></div><button class="button button-quiet" id="logout" type="button">Sair</button></div>
+        </header>
+        <section class="requests-section">
+            <div class="section-heading"><div><h2>Novo usuário</h2><p>Senhas precisam ter no mínimo 12 caracteres.</p></div></div>
+            <form class="form-grid" id="create-user-form" novalidate>
+                <label>Login<input name="username" maxlength="80" required></label>
+                <label>Nome<input name="displayName" maxlength="150" required></label>
+                <label>Senha temporária<input name="password" type="password" minlength="12" maxlength="100" required></label>
+                <label>Papel<select name="role"><option value="REQUESTER">Solicitante</option><option value="BUYER">Comprador</option><option value="MANAGER">Gestor</option><option value="ADMIN">Administrador</option></select></label>
+                <label>Setor<select name="departmentId" class="department-select"></select></label>
+                <p class="form-hint full-width">Usuários de um setor só veem as requisições desse setor. "Todos os setores" e administradores veem tudo.</p>
+                <p class="form-message full-width" id="create-user-message" role="alert" hidden></p>
+                <div class="full-width"><button class="button button-primary" id="create-user-button" type="submit">Criar usuário</button></div>
+            </form>
+        </section>
+        <section class="requests-section">
+            <div class="section-heading"><div><h2>Acessos cadastrados</h2><p id="user-count">Carregando dados...</p></div><button class="button button-quiet" id="refresh-users" type="button">Atualizar</button></div>
+            <div class="table-wrapper"><table><thead><tr><th>Login</th><th>Nome</th><th>Papel</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="user-table-body"></tbody></table></div>
+        </section>
+        <section class="requests-section">
+            <div class="section-heading"><div><h2>Setores</h2><p id="department-count">Carregando dados...</p></div></div>
+            <form class="form-grid" id="create-department-form" novalidate>
+                <label>Nome do setor<input name="name" maxlength="120" required></label>
+                <div><button class="button button-primary" type="submit">Adicionar setor</button></div>
+            </form>
+            <div class="table-wrapper"><table><thead><tr><th>Nome</th><th>Status</th><th>Ações</th></tr></thead><tbody id="department-table-body"></tbody></table></div>
+        </section>
+    </main>
+</div>
+<div class="operation-feedback" id="operation-feedback" role="status" aria-live="polite" hidden></div>
+<dialog class="confirmation-dialog" id="password-dialog"><form class="confirmation-content" id="reset-password-form"><h2>Redefinir senha</h2><p id="password-dialog-message"></p><label>Nova senha<input id="new-password" type="password" minlength="12" maxlength="100" required></label><div class="confirmation-actions"><button class="button button-quiet" id="close-password-dialog" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar senha</button></div></form></dialog>
+<script src="/theme.js" defer></script>
+<script src="/draft-nav.js" defer></script>
+<script src="/users.js" defer></script>
+</body>
+</html>
