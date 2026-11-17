@@ -20,9 +20,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.jayway.jsonpath.JsonPath;
+import java.util.List;
 import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -193,6 +196,29 @@ class SecurityIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequestBody()))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void everyRoleThatSeesTheRequisitionGetsItsPurchaseReason() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        for (UserRole role : List.of(UserRole.REQUESTER, UserRole.BUYER, UserRole.MANAGER)) {
+            userRepository.insert(new LocalUser(null, "reason-" + role + "-" + suffix, passwordEncoder.encode("correct-password"),
+                    "Reason " + role, role, true, departmentId));
+        }
+        String created = mockMvc.perform(post("/api/purchase-requests")
+                        .with(user("reason-REQUESTER-" + suffix).roles("REQUESTER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validRequestBody().replace("Security test request.", "Line one.\\nLine two.")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long id = ((Number) JsonPath.read(created, "$.id")).longValue();
+
+        for (UserRole role : List.of(UserRole.REQUESTER, UserRole.BUYER, UserRole.MANAGER)) {
+            mockMvc.perform(get("/api/purchase-requests/" + id).with(user("reason-" + role + "-" + suffix).roles(role.name())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.purchaseReason").value("Line one.\nLine two."));
+        }
     }
 
     @Test

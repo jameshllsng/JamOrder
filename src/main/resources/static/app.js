@@ -38,6 +38,7 @@ const confirmationAction = document.querySelector("#confirmation-action");
 const requestDetailsDialog = document.querySelector("#request-details-dialog");
 const requestDetailsItems = document.querySelector("#request-details-items");
 const requestHistory = document.querySelector("#request-history");
+const requestDetailsReason = document.querySelector("#request-details-reason");
 const statusFilter = document.querySelector("#status-filter");
 const departmentFilter = document.querySelector("#department-filter");
 const searchInput = document.querySelector("#request-search");
@@ -306,6 +307,7 @@ async function showRequestDetails(id) {
         const request = await requestResponse.json(); const history = await historyResponse.json();
         document.querySelector("#request-details-title").textContent = request.requestNumber ? `Requisição ${request.requestNumber}` : "Rascunho (falta lançar no TOTVS)";
         document.querySelector("#request-details-subtitle").textContent = [statusLabels[request.status], request.departmentName, request.usageLocation ? `Local: ${request.usageLocation}` : null, request.costCenter ? `CC ${request.costCenter}` : null, request.approvedAt ? `Aprovada por ${request.approvedBy} em ${formatDateTime(request.approvedAt)}` : null].filter(Boolean).join(" · ");
+        const reason = request.purchaseReason?.trim(); requestDetailsReason.textContent = reason || "—"; requestDetailsReason.classList.toggle("value-missing", !reason);
         const canReceive = receivableStatuses.includes(request.status);
         requestDetailsItems.replaceChildren(); request.items.forEach(item => requestDetailsItems.append(createDetailItem(request.id, item, canReceive)));
         requestHistory.replaceChildren(); history.forEach(entry => { const item = document.createElement("li"); const title = document.createElement("strong"); title.textContent = entry.details; const detail = document.createElement("span"); detail.textContent = `${entry.performedBy} · ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(entry.createdAt))}`; item.append(title, detail); requestHistory.append(item); });
